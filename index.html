@@ -57,15 +57,15 @@ body{
   overscroll-behavior:none;
 }
 
-/* Sticky header (app-gevoel) */
+/* Sticky header */
 .stickyHeader{
   position:sticky;
   top:0;
   z-index:50;
-  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  background:rgba(0,0,0,0);
   backdrop-filter:saturate(180%) blur(10px);
   padding:8px 8px 10px;
-  margin:-10px -10px 10px; /* full-bleed */
+  margin:-10px -10px 10px;
   border-bottom:1px solid var(--line);
 }
 .headerCard{
@@ -79,15 +79,11 @@ body{
   box-shadow:var(--shadow);
 }
 .headerLogo{
-  width:54px;
-  height:54px;
+  width:54px; height:54px;
   border-radius:14px;
   object-fit:cover;
 }
-.headerText{
-  flex:1;
-  min-width:0;
-}
+.headerText{flex:1; min-width:0;}
 .headerLine1{
   font-weight:900;
   font-size:14px;
@@ -99,6 +95,14 @@ body{
   margin-top:2px;
   font-weight:900;
   font-size:18px;
+}
+.installMini{
+  width:auto;
+  margin:0;
+  padding:10px 12px;
+  font-size:14px;
+  border-radius:12px;
+  display:none;
 }
 
 .card{
@@ -115,7 +119,7 @@ th,td{padding:6px; text-align:center; vertical-align:middle;}
 .smallNote{font-size:12px; opacity:.82; margin-top:8px;}
 
 input{
-  font-size:16px;
+  font-size:16px;     /* voorkomt iOS zoom */
   width:54px;
   padding:8px 10px;
   text-align:center;
@@ -157,7 +161,6 @@ button{
   color:#fff;
   margin-top:6px;
 }
-#installBtn{display:none;}
 
 #winner{
   font-size:36px;
@@ -193,29 +196,10 @@ button{
 }
 
 canvas{ position:fixed; top:0; left:0; pointer-events:none; }
-
-/* Splashscreen */
-#splash{
-  position:fixed;
-  inset:0;
-  background:var(--bg);
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  z-index:9999;
-}
-#splash img{ width:190px; }
-#splash h2{ margin:10px 0 0; color:var(--accent); }
 </style>
 </head>
 
 <body>
-
-<div id="splash">
-  <img src="logo.png" alt="René’s Telraam">
-  <h2>René’s Telraam</h2>
-</div>
 
 <div class="stickyHeader">
   <div class="headerCard">
@@ -224,7 +208,7 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
       <div class="headerLine1" id="namesLineSticky">Wij - Zij</div>
       <div class="headerLine2" id="pointsLineSticky">0 - 0</div>
     </div>
-    <button id="installBtn" style="width:auto; margin:0; padding:10px 12px; font-size:14px; border-radius:12px;">📲</button>
+    <button id="installBtn" class="installMini">📲</button>
   </div>
 </div>
 
@@ -253,12 +237,19 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
     </thead>
     <tbody id="rows"></tbody>
     <tfoot>
-      <!-- Alles op 1 rij: punten + roem + totaal -->
       <tr>
         <th style="text-align:left;">Totaal</th>
-        <th><span id="puntenWij">0</span> <span style="opacity:.65;">(+</span><span id="roemWij">0</span><span style="opacity:.65;">)</span> = <span id="totalWij">0</span></th>
+        <th>
+          <span id="puntenWij">0</span>
+          <span style="opacity:.65;">(+</span><span id="roemWij">0</span><span style="opacity:.65;">)</span>
+          = <span id="totalWij">0</span>
+        </th>
         <th></th>
-        <th><span id="puntenZij">0</span> <span style="opacity:.65;">(+</span><span id="roemZij">0</span><span style="opacity:.65;">)</span> = <span id="totalZij">0</span></th>
+        <th>
+          <span id="puntenZij">0</span>
+          <span style="opacity:.65;">(+</span><span id="roemZij">0</span><span style="opacity:.65;">)</span>
+          = <span id="totalZij">0</span>
+        </th>
         <th></th>
       </tr>
     </tfoot>
@@ -267,7 +258,7 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
 
 <div id="winner"></div>
 
-<button onclick="nieuwPotje()">Nieuw potje</button>
+<button id="newGameBtn">Nieuw potje</button>
 
 <div class="card">
   <h3 style="margin:0 0 10px;">Highscores</h3>
@@ -282,765 +273,582 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
 <canvas id="confetti"></canvas>
 
 <script>
-/* ---------------- Splash ---------------- */
-setTimeout(() => (document.getElementById("splash").style.display = "none"), 900);
+(function(){
+  // DOM refs
+  var installBtn = document.getElementById("installBtn");
 
-/* ---------------- App install button ---------------- */
-let deferredPrompt;
-const installBtn = document.getElementById("installBtn");
+  var w1 = document.getElementById("w1");
+  var w2 = document.getElementById("w2");
+  var z1 = document.getElementById("z1");
+  var z2 = document.getElementById("z2");
 
-function isStandaloneMode(){
-  return window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
-}
-window.addEventListener("beforeinstallprompt", e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  if (!isStandaloneMode()) installBtn.style.display = "block";
-});
-installBtn.onclick = () => deferredPrompt && deferredPrompt.prompt();
-if (isStandaloneMode()) installBtn.style.display = "none";
+  var tWij = document.getElementById("tWij");
+  var tZij = document.getElementById("tZij");
+  var rows = document.getElementById("rows");
 
-/* ---------------- Helpers ---------------- */
-const TOTAL = 162, ROUNDS = 16;
+  var namesLineSticky = document.getElementById("namesLineSticky");
+  var pointsLineSticky = document.getElementById("pointsLineSticky");
 
-function nowISO(){ return new Date().toISOString(); }
-function fmtDateTime(iso){
-  const d = new Date(iso);
-  const pad = n => String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-function escapeHTML(s){
-  return String(s ?? "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[c]));
-}
-function teamWijNaam(){
-  const a = (w1.value || "Wij").trim();
-  const b = (w2.value || "").trim();
-  return b ? `${a} & ${b}` : a;
-}
-function teamZijNaam(){
-  const a = (z1.value || "Zij").trim();
-  const b = (z2.value || "").trim();
-  return b ? `${a} & ${b}` : a;
-}
-function updateNames(){
-  tWij.textContent = teamWijNaam();
-  tZij.textContent = teamZijNaam();
-  namesLineSticky.textContent = `${teamWijNaam()} - ${teamZijNaam()}`;
-}
+  var puntenWijEl = document.getElementById("puntenWij");
+  var puntenZijEl = document.getElementById("puntenZij");
+  var roemWijEl = document.getElementById("roemWij");
+  var roemZijEl = document.getElementById("roemZij");
+  var totalWijEl = document.getElementById("totalWij");
+  var totalZijEl = document.getElementById("totalZij");
 
-/* ---------------- Build rows + separators ---------------- */
-const rows = document.getElementById("rows");
-for (let i = 1; i <= ROUNDS; i++) {
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td>${i}</td>
-    <td><input class="inp-wij" data-t="w" data-r="${i}" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
-    <td><input class="inp-wijroem" data-t="rw" data-r="${i}" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
-    <td><input class="inp-zij" data-t="z" data-r="${i}" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
-    <td><input class="inp-zijroem" data-t="rz" data-r="${i}" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
-  `;
-  rows.appendChild(tr);
+  var winnerEl = document.getElementById("winner");
+  var newGameBtn = document.getElementById("newGameBtn");
 
-  if (i % 4 === 0 && i < 16) {
-    const sep = document.createElement("tr");
-    sep.className = "sepRow";
-    sep.innerHTML = `<td colspan="5"><div class="sepLine"></div></td>`;
-    rows.appendChild(sep);
+  var highscoresEl = document.getElementById("highscores");
+  var historyEl = document.getElementById("history");
+
+  var confettiCanvas = document.getElementById("confetti");
+  var confettiCtx = confettiCanvas.getContext("2d");
+
+  // PWA install
+  var deferredPrompt = null;
+  function isStandaloneMode(){
+    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
   }
-}
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    if (!isStandaloneMode()) installBtn.style.display = "block";
+  });
+  installBtn.addEventListener("click", function(){ if (deferredPrompt) deferredPrompt.prompt(); });
+  if (isStandaloneMode()) installBtn.style.display = "none";
 
-/* Enter = toetsenbord weg (blur) */
-document.querySelectorAll("input").forEach(inp => {
-  inp.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
+  // Constants & storage keys
+  var TOTAL = 162, ROUNDS = 16;
+  var GAME_KEY = "rene_telraam_game_v8";
+  var HIST_KEY = "rene_telraam_history_v2";
+
+  var suppress = false;
+  var lastWinnerKey = null;
+  var gameStartedAt = null;
+  var gameEndedAt = null;
+
+  function nowISO(){ return new Date().toISOString(); }
+  function pad(n){ n = String(n); return n.length<2 ? "0"+n : n; }
+  function fmtDateTime(iso){
+    var d = new Date(iso);
+    return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+  }
+  function escapeHTML(s){
+    s = String(s == null ? "" : s);
+    return s.replace(/[&<>"']/g, function(c){
+      return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" })[c];
+    });
+  }
+
+  function teamWijNaam(){
+    var a = (w1.value || "Wij").trim();
+    var b = (w2.value || "").trim();
+    return b ? (a + " & " + b) : a;
+  }
+  function teamZijNaam(){
+    var a = (z1.value || "Zij").trim();
+    var b = (z2.value || "").trim();
+    return b ? (a + " & " + b) : a;
+  }
+  function updateNames(){
+    var wij = teamWijNaam();
+    var zij = teamZijNaam();
+    tWij.textContent = wij;
+    tZij.textContent = zij;
+    namesLineSticky.textContent = wij + " - " + zij;
+  }
+
+  function normalizeSpecial(v){
+    v = (v || "").trim();
+    if (!v) return "";
+    var c = v.charAt(0);
+    if (c === "n" || c === "N") return "N";
+    if (c === "p" || c === "P") return "P";
+    return v;
+  }
+  function isNumericLike(s){
+    if (s === "" || s == null) return false;
+    return !isNaN(String(s).trim());
+  }
+  function pointsValueFromDisplay(s){
+    var v = normalizeSpecial(s);
+    if (v === "N" || v === "P") return 0;
+    if (isNumericLike(v)){
+      var n = parseInt(v,10);
+      if (n < 0) n = 0;
+      if (n > TOTAL) n = TOTAL;
+      return n;
+    }
+    return null;
+  }
+
+  function q(t,r){
+    return document.querySelector('[data-t="'+t+'"][data-r="'+r+'"]');
+  }
+  function roemFieldFor(team, round){
+    return (team === "w") ? q("rw", round) : q("rz", round);
+  }
+  function setPBonus(team, round, apply){
+    var ptsEl = q(team, round);
+    var roemEl = roemFieldFor(team, round);
+    var had = (ptsEl.dataset.pbonus === "1");
+
+    if (apply && !had){
+      var current = parseInt(roemEl.value,10) || 0;
+      roemEl.value = String(current + 100);
+      ptsEl.dataset.pbonus = "1";
+    }
+    if (!apply && had){
+      var cur2 = parseInt(roemEl.value,10) || 0;
+      roemEl.value = String(Math.max(0, cur2 - 100));
+      ptsEl.dataset.pbonus = "0";
+    }
+  }
+
+  // Build rows + separators
+  for (var i=1; i<=ROUNDS; i++){
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td>'+i+'</td>'+
+      '<td><input class="inp-wij" data-t="w" data-r="'+i+'" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>'+
+      '<td><input class="inp-wijroem" data-t="rw" data-r="'+i+'" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>'+
+      '<td><input class="inp-zij" data-t="z" data-r="'+i+'" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>'+
+      '<td><input class="inp-zijroem" data-t="rz" data-r="'+i+'" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>';
+    rows.appendChild(tr);
+
+    if (i % 4 === 0 && i < 16){
+      var sep = document.createElement("tr");
+      sep.className = "sepRow";
+      sep.innerHTML = '<td colspan="5"><div class="sepLine"></div></td>';
+      rows.appendChild(sep);
+    }
+  }
+
+  // Enter = blur (keyboard weg)
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Enter" && e.target && e.target.tagName === "INPUT"){
       e.preventDefault();
-      inp.blur();
+      e.target.blur();
     }
   });
-});
 
-/* ---------------- Storage keys ---------------- */
-const GAME_KEY = "rene_telraam_game_v5";
-const HIST_KEY = "rene_telraam_history_v2";
+  function confetti(){
+    confettiCanvas.width = innerWidth;
+    confettiCanvas.height = innerHeight;
 
-/* ---------------- Game state ---------------- */
-let suppress = false;
-let lastWinnerKey = null;
-let gameStartedAt = null;
-let gameEndedAt = null;
+    var parts = [];
+    for (var i=0; i<220; i++){
+      parts.push({
+        x: Math.random() * confettiCanvas.width,
+        y: Math.random() * confettiCanvas.height,
+        r: Math.random() * 6 + 2,
+        vy: Math.random() * 2 + 2
+      });
+    }
 
-/* ---------------- Query helpers ---------------- */
-function q(t,r){ return document.querySelector(`[data-t="${t}"][data-r="${r}"]`); }
-function allScoreInputs(){ return document.querySelectorAll('input[data-t]'); }
+    var timer = setInterval(function(){
+      confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+      parts.forEach(function(o){
+        confettiCtx.beginPath();
+        confettiCtx.arc(o.x,o.y,o.r,0,Math.PI*2);
+        confettiCtx.fillStyle = "hsl(" + (Math.random()*360) + ",100%,50%)";
+        confettiCtx.fill();
+        o.y += o.vy;
+        if (o.y > confettiCanvas.height) o.y = 0;
+      });
+    }, 30);
 
-/* N/P */
-function normalizeSpecial(v){
-  const s = (v || "").trim();
-  if (!s) return "";
-  const c = s[0];
-  if (c === "n" || c === "N") return "N";
-  if (c === "p" || c === "P") return "P";
-  return s;
-}
-function isNumericLike(s){
-  if (s === "" || s == null) return false;
-  return !isNaN(String(s).trim());
-}
-function pointsValueFromDisplay(s){
-  const v = normalizeSpecial(s);
-  if (v === "N" || v === "P") return 0;
-  if (isNumericLike(v)) return Math.max(0, Math.min(TOTAL, parseInt(v,10)));
-  return null;
-}
-
-/* P => +100 roem (eenmalig) */
-function roemFieldFor(team, round){
-  return (team === "w") ? q("rw", round) : q("rz", round);
-}
-function setPBonus(team, round, apply){
-  const ptsEl = q(team, round);
-  const roemEl = roemFieldFor(team, round);
-
-  const had = ptsEl.dataset.pbonus === "1";
-  if (apply && !had){
-    const current = parseInt(roemEl.value,10) || 0;
-    roemEl.value = String(current + 100);
-    ptsEl.dataset.pbonus = "1";
+    setTimeout(function(){ clearInterval(timer); }, 2600);
   }
-  if (!apply && had){
-    const current = parseInt(roemEl.value,10) || 0;
-    roemEl.value = String(Math.max(0, current - 100));
-    ptsEl.dataset.pbonus = "0";
+
+  function showWinnerOnce(w, z){
+    var name = (w > z) ? teamWijNaam() : teamZijNaam();
+    var key = String(w) + "|" + String(z) + "|" + name;
+    winnerEl.textContent = "🏆 Winnaar: " + name + " 🏆";
+    if (lastWinnerKey !== key){
+      lastWinnerKey = key;
+      confetti();
+    }
   }
-}
 
-/* ---------------- Wire input events ---------------- */
-allScoreInputs().forEach(inp => inp.addEventListener("input", onScoreInput));
-[w1,w2,z1,z2].forEach(i => i.addEventListener("input", () => { updateNames(); saveGame(); }));
+  function updateTotalsAndUI(){
+    var tw=0, tz=0, rw=0, rz=0;
+    var ingevuld = true;
 
-function onScoreInput(e){
-  if (suppress) return;
+    var nWij=0, nZij=0, pWij=0, pZij=0;
 
-  if (!gameStartedAt) { gameStartedAt = nowISO(); gameEndedAt = null; }
+    for (var i=1; i<=ROUNDS; i++){
+      var wDisp = (q("w",i).value || "").trim();
+      var zDisp = (q("z",i).value || "").trim();
 
-  const el = e.target;
-  const t = el.dataset.t;
-  const r = parseInt(el.dataset.r, 10);
+      var wNorm = normalizeSpecial(wDisp);
+      var zNorm = normalizeSpecial(zDisp);
 
-  if (t === "rw" || t === "rz"){
+      if (wNorm === "N") nWij++;
+      if (zNorm === "N") nZij++;
+      if (wNorm === "P") pWij++;
+      if (zNorm === "P") pZij++;
+
+      var wPts = pointsValueFromDisplay(wDisp);
+      var zPts = pointsValueFromDisplay(zDisp);
+
+      if (wPts === null || zPts === null) ingevuld = false;
+
+      tw += (wPts == null ? 0 : wPts);
+      tz += (zPts == null ? 0 : zPts);
+
+      rw += parseInt(q("rw",i).value,10) || 0;
+      rz += parseInt(q("rz",i).value,10) || 0;
+    }
+
+    var totaalWij = tw + rw;
+    var totaalZij = tz + rz;
+
+    puntenWijEl.textContent = tw;
+    puntenZijEl.textContent = tz;
+    roemWijEl.textContent = rw;
+    roemZijEl.textContent = rz;
+    totalWijEl.textContent = totaalWij;
+    totalZijEl.textContent = totaalZij;
+
+    pointsLineSticky.textContent = tw + " - " + tz;
+
+    if (ingevuld){
+      if (!gameEndedAt) gameEndedAt = nowISO();
+      showWinnerOnce(totaalWij, totaalZij);
+    } else {
+      winnerEl.textContent = "";
+      lastWinnerKey = null;
+      gameEndedAt = null;
+    }
+
+    document.body.dataset.nWij = String(nWij);
+    document.body.dataset.nZij = String(nZij);
+    document.body.dataset.pWij = String(pWij);
+    document.body.dataset.pZij = String(pZij);
+  }
+
+  function onScoreInput(e){
+    if (suppress) return;
+
+    if (!gameStartedAt){ gameStartedAt = nowISO(); gameEndedAt = null; }
+
+    var el = e.target;
+    var t = el.dataset.t;
+    var r = parseInt(el.dataset.r, 10);
+
+    if (t === "rw" || t === "rz"){
+      updateTotalsAndUI();
+      saveGame();
+      return;
+    }
+    if (t !== "w" && t !== "z") return;
+
+    var prevNorm = el.dataset.prevNorm || "";
+    var valNorm = normalizeSpecial(el.value);
+
+    var otherT = (t === "w") ? "z" : "w";
+    var otherEl = q(otherT, r);
+
+    suppress = true;
+
+    if (valNorm === ""){
+      otherEl.value = "";
+    } else if (valNorm === "N" || valNorm === "P"){
+      el.value = valNorm;
+      otherEl.value = String(TOTAL);
+    } else if (isNumericLike(valNorm)){
+      var num = parseInt(valNorm,10);
+      if (num < 0) num = 0;
+      if (num > TOTAL) num = TOTAL;
+      el.value = String(num);
+      otherEl.value = String(TOTAL - num);
+    } else {
+      otherEl.value = "";
+    }
+
+    if (prevNorm === "P" && valNorm !== "P") setPBonus(t, r, false);
+    if (prevNorm !== "P" && valNorm === "P") setPBonus(t, r, true);
+
+    el.dataset.prevNorm = valNorm;
+
+    suppress = false;
+
     updateTotalsAndUI();
     saveGame();
-    return;
   }
 
-  if (t !== "w" && t !== "z") return;
-
-  const prevNorm = el.dataset.prevNorm || "";
-  const valNorm = normalizeSpecial(el.value);
-
-  const otherT = (t === "w") ? "z" : "w";
-  const otherEl = q(otherT, r);
-
-  suppress = true;
-
-  if (valNorm === "") {
-    otherEl.value = "";
-  } else if (valNorm === "N" || valNorm === "P") {
-    el.value = valNorm;
-    otherEl.value = String(TOTAL);
-  } else if (isNumericLike(valNorm)) {
-    const num = Math.max(0, Math.min(TOTAL, parseInt(valNorm,10)));
-    el.value = String(num);
-    otherEl.value = String(TOTAL - num);
-  } else {
-    otherEl.value = "";
-  }
-
-  if (prevNorm === "P" && valNorm !== "P") setPBonus(t, r, false);
-  if (prevNorm !== "P" && valNorm === "P") setPBonus(t, r, true);
-
-  el.dataset.prevNorm = valNorm;
-
-  suppress = false;
-
-  updateTotalsAndUI();
-  saveGame();
-}
-
-/* ---------------- Totals + Winner ---------------- */
-function updateTotalsAndUI(){
-  let tw=0, tz=0, rw=0, rz=0;
-  let ingevuld = true;
-
-  let nWij=0, nZij=0, pWij=0, pZij=0;
-
-  for (let i=1; i<=ROUNDS; i++){
-    const wDisp = q("w",i).value.trim();
-    const zDisp = q("z",i).value.trim();
-
-    const wNorm = normalizeSpecial(wDisp);
-    const zNorm = normalizeSpecial(zDisp);
-
-    if (wNorm === "N") nWij++;
-    if (zNorm === "N") nZij++;
-    if (wNorm === "P") pWij++;
-    if (zNorm === "P") pZij++;
-
-    const wPts = pointsValueFromDisplay(wDisp);
-    const zPts = pointsValueFromDisplay(zDisp);
-
-    if (wPts === null || zPts === null) ingevuld = false;
-
-    tw += (wPts ?? 0);
-    tz += (zPts ?? 0);
-
-    rw += parseInt(q("rw",i).value,10) || 0;
-    rz += parseInt(q("rz",i).value,10) || 0;
-  }
-
-  const totaalWij = tw + rw;
-  const totaalZij = tz + rz;
-
-  puntenWij.textContent = tw;
-  puntenZij.textContent = tz;
-  roemWij.textContent = rw;
-  roemZij.textContent = rz;
-  totalWij.textContent = totaalWij;
-  totalZij.textContent = totaalZij;
-
-  pointsLineSticky.textContent = `${tw} - ${tz}`;
-
-  if (ingevuld) {
-    if (!gameEndedAt) gameEndedAt = nowISO();
-    showWinnerOnce(totaalWij, totaalZij);
-  } else {
-    winner.textContent = "";
-    lastWinnerKey = null;
-    gameEndedAt = null;
-  }
-
-  document.body.dataset.nWij = String(nWij);
-  document.body.dataset.nZij = String(nZij);
-  document.body.dataset.pWij = String(pWij);
-  document.body.dataset.pZij = String(pZij);
-}
-
-function showWinnerOnce(w, z){
-  const name = (w > z) ? teamWijNaam() : teamZijNaam();
-  const key = `${w}|${z}|${name}`;
-  winner.textContent = `🏆 Winnaar: ${name} 🏆`;
-  if (lastWinnerKey !== key) { lastWinnerKey = key; confetti(); }
-}
-
-/* ---------------- Save/load game ---------------- */
-function saveGame(){
-  const d = {
-    w1:w1.value, w2:w2.value, z1:z1.value, z2:z2.value,
-    gameStartedAt, gameEndedAt, lastWinnerKey
-  };
-  allScoreInputs().forEach(i => {
-    const k = i.dataset.t + i.dataset.r;
-    d[k] = i.value;
-    if (i.dataset.t === "w" || i.dataset.t === "z"){
-      d[k + "_pbonus"] = i.dataset.pbonus || "0";
-      d[k + "_prev"] = i.dataset.prevNorm || normalizeSpecial(i.value);
-    }
-  });
-  localStorage.setItem(GAME_KEY, JSON.stringify(d));
-}
-
-function loadGame(){
-  const d = JSON.parse(localStorage.getItem(GAME_KEY) || "{}");
-
-  w1.value = d.w1 || "";
-  w2.value = d.w2 || "";
-  z1.value = d.z1 || "";
-  z2.value = d.z2 || "";
-
-  gameStartedAt = d.gameStartedAt || null;
-  gameEndedAt = d.gameEndedAt || null;
-  lastWinnerKey = d.lastWinnerKey || null;
-
-  allScoreInputs().forEach(i => {
-    const k = i.dataset.t + i.dataset.r;
-    if (d[k] !== undefined) i.value = d[k];
-    if (i.dataset.t === "w" || i.dataset.t === "z"){
-      i.dataset.pbonus = d[k + "_pbonus"] || "0";
-      i.dataset.prevNorm = d[k + "_prev"] || normalizeSpecial(i.value);
-    }
-  });
-}
-
-/* ---------------- History + PDF + delete ---------------- */
-function loadHistory(){ return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); }
-function saveHistory(arr){ localStorage.setItem(HIST_KEY, JSON.stringify(arr)); }
-
-function buildHistoryEntryFromCurrentGame(){
-  const tw = parseInt(puntenWij.textContent,10) || 0;
-  const tz = parseInt(puntenZij.textContent,10) || 0;
-  const rw = parseInt(roemWij.textContent,10) || 0;
-  const rz = parseInt(roemZij.textContent,10) || 0;
-
-  const nWij = parseInt(document.body.dataset.nWij || "0",10);
-  const nZij = parseInt(document.body.dataset.nZij || "0",10);
-  const pWij = parseInt(document.body.dataset.pWij || "0",10);
-  const pZij = parseInt(document.body.dataset.pZij || "0",10);
-
-  const rounds = [];
-  for (let i=1; i<=ROUNDS; i++){
-    rounds.push({ r:i, w:q("w",i).value, rw:q("rw",i).value, z:q("z",i).value, rz:q("rz",i).value });
-  }
-
-  const wijTeam = teamWijNaam();
-  const zijTeam = teamZijNaam();
-  const winnerTeam = ((tw+rw) > (tz+rz)) ? wijTeam : zijTeam;
-
-  return {
-    id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2),
-    createdAt: nowISO(),
-    startedAt: gameStartedAt,
-    endedAt: gameEndedAt,
-    wijTeam, zijTeam,
-    pointsWij: tw, pointsZij: tz,
-    roemWij: rw, roemZij: rz,
-    totalWij: tw+rw, totalZij: tz+rz,
-    nWij, nZij, pWij, pZij,
-    winnerText: `🏆 Winnaar: ${winnerTeam} 🏆`,
-    rounds
-  };
-}
-
-function nieuwPotje(){
-  if (winner.textContent && gameStartedAt && gameEndedAt) {
-    const entry = buildHistoryEntryFromCurrentGame();
-    const hist = loadHistory();
-    hist.unshift(entry);
-    saveHistory(hist);
-  }
-  localStorage.removeItem(GAME_KEY);
-  location.reload();
-}
-
-function printGameAsPDF(entry){
-  const w = window.open("", "_blank");
-  if (!w) return;
-
-  const rowsHtml = entry.rounds.map(r => `
-    <tr>
-      <td>${r.r}</td>
-      <td>${escapeHTML(r.w)}</td>
-      <td>${escapeHTML(r.rw || "")}</td>
-      <td>${escapeHTML(r.z)}</td>
-      <td>${escapeHTML(r.rz || "")}</td>
-    </tr>
-  `).join("");
-
-  const html = `
-<!doctype html>
-<html lang="nl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>René’s Telraam - PDF</title>
-<style>
-  body{ font-family: Arial, sans-serif; margin: 24px; color:#111; }
-  h1{ margin:0 0 8px; }
-  .meta{ margin: 8px 0 16px; }
-  .box{ border:1px solid #ddd; padding:12px; border-radius:10px; margin-bottom:14px; }
-  table{ width:100%; border-collapse:collapse; }
-  th,td{ border:1px solid #ddd; padding:6px; text-align:center; }
-  th{ background:#f3f3f3; }
-  .small{ font-size:12px; color:#333; }
-  @media print{ .noprint{ display:none; } }
-</style>
-</head>
-<body>
-  <div class="noprint" style="margin-bottom:12px;">
-    Tip: kies in het printmenu voor <b>“Bewaar als PDF”</b>.
-  </div>
-
-  <h1>René’s Telraam</h1>
-  <div class="meta small">
-    <b>${escapeHTML(entry.wijTeam)}</b> - <b>${escapeHTML(entry.zijTeam)}</b><br>
-    Datum: ${fmtDateTime(entry.startedAt).slice(0,10)}<br>
-    Begin: ${fmtDateTime(entry.startedAt)}<br>
-    Einde: ${fmtDateTime(entry.endedAt)}
-  </div>
-
-  <div class="box">
-    <b>Scores</b><br>
-    Punten: ${entry.pointsWij} - ${entry.pointsZij}<br>
-    Roem: ${entry.roemWij} - ${entry.roemZij}<br>
-    Totaal: ${entry.totalWij} - ${entry.totalZij}<br>
-    N: ${entry.nWij} - ${entry.nZij} &nbsp;|&nbsp; P: ${entry.pWij} - ${entry.pZij}<br><br>
-    ${escapeHTML(entry.winnerText)}
-  </div>
-
-  <div class="box">
-    <b>Rondes</b>
-    <table>
-      <thead>
-        <tr><th>R</th><th>Wij</th><th>Roem Wij</th><th>Zij</th><th>Roem Zij</th></tr>
-      </thead>
-      <tbody>${rowsHtml}</tbody>
-    </table>
-  </div>
-
-  <script>window.onload = () => window.print();</script>
-</body>
-</html>
-  `;
-
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-}
-
-/* ---------------- Highscores ---------------- */
-function renderHighscores(hist){
-  const teamStats = new Map();
-  function addTeam(teamName, points, roem, nCount, pCount){
-    const key = teamName || "Onbekend";
-    if (!teamStats.has(key)) {
-      teamStats.set(key, { team:key, bestPoints:-Infinity, worstPoints:Infinity, bestRoem:-Infinity, nTotal:0, pTotal:0 });
-    }
-    const s = teamStats.get(key);
-    s.bestPoints = Math.max(s.bestPoints, points);
-    s.worstPoints = Math.min(s.worstPoints, points);
-    s.bestRoem = Math.max(s.bestRoem, roem);
-    s.nTotal += nCount;
-    s.pTotal += pCount;
-  }
-  hist.forEach(g => {
-    addTeam(g.wijTeam, g.pointsWij, g.roemWij, g.nWij, g.pWij);
-    addTeam(g.zijTeam, g.pointsZij, g.roemZij, g.nZij, g.pZij);
-  });
-
-  highscores.innerHTML = "";
-  const arr = Array.from(teamStats.values());
-  const top = (cmp) => arr.slice().sort(cmp)[0];
-
-  function card(title, content){
-    const d = document.createElement("div");
-    d.className = "badge";
-    d.innerHTML = `<div style="font-weight:900; margin-bottom:6px;">${title}</div><div>${content}</div>`;
-    highscores.appendChild(d);
-  }
-
-  if (!hist.length){
-    card("Nog geen highscores", "Speel een potje en druk daarna op <b>Nieuw potje</b> om het op te slaan.");
-    return;
-  }
-
-  const bestPoints = top((a,b)=>b.bestPoints - a.bestPoints);
-  const worstPoints = top((a,b)=>a.worstPoints - b.worstPoints);
-  const bestRoem = top((a,b)=>b.bestRoem - a.bestRoem);
-  const mostN = top((a,b)=>b.nTotal - a.nTotal);
-  const mostP = top((a,b)=>b.pTotal - a.pTotal);
-
-  card("Hoogste punten (zonder roem)", `<b>${escapeHTML(bestPoints.team)}</b><br>${bestPoints.bestPoints} punten`);
-  card("Laagste punten (zonder roem)", `<b>${escapeHTML(worstPoints.team)}</b><br>${worstPoints.worstPoints} punten`);
-  card("Meeste roem", `<b>${escapeHTML(bestRoem.team)}</b><br>${bestRoem.bestRoem} roem`);
-  card("Meeste keer N", `<b>${escapeHTML(mostN.team)}</b><br>${mostN.nTotal}× N`);
-  card("Meeste keer P", `<b>${escapeHTML(mostP.team)}</b><br>${mostP.pTotal}× P`);
-}
-
-/* ---------------- Render history ---------------- */
-function renderHistoryAndHighscores(){
-  const hist = loadHistory();
-  history.innerHTML = "";
-
-  hist.forEach(entry => {
-    const div = document.createElement("div");
-    div.className = "histItem";
-
-    const meta = document.createElement("div");
-    meta.className = "histMeta";
-    meta.innerHTML = `
-      <div style="font-weight:900;">${escapeHTML(entry.wijTeam)} - ${escapeHTML(entry.zijTeam)}</div>
-      <div style="opacity:.85; margin-top:2px;">
-        Start: ${fmtDateTime(entry.startedAt)}<br>
-        Eind: ${fmtDateTime(entry.endedAt)}
-      </div>
-      <div style="margin-top:6px;">
-        Punten: <b>${entry.pointsWij}</b> - <b>${entry.pointsZij}</b> |
-        Roem: <b>${entry.roemWij}</b> - <b>${entry.roemZij}</b> |
-        Totaal: <b>${entry.totalWij}</b> - <b>${entry.totalZij}</b>
-      </div>
-      <div style="margin-top:4px; opacity:.9;">
-        N: ${entry.nWij} - ${entry.nZij} &nbsp;|&nbsp; P: ${entry.pWij} - ${entry.pZij}
-      </div>
-      <div style="margin-top:6px;">${escapeHTML(entry.winnerText)}</div>
-    `;
-
-    const btns = document.createElement("div");
-    btns.className = "histBtns";
-
-    const pdfBtn = document.createElement("button");
-    pdfBtn.textContent = "📄 PDF";
-    pdfBtn.onclick = () => printGameAsPDF(entry);
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "🗑️ Verwijder";
-    delBtn.onclick = () => {
-      const next = loadHistory().filter(x => x.id !== entry.id);
-      saveHistory(next);
-      renderHistoryAndHighscores();
+  function saveGame(){
+    var d = {
+      w1:w1.value, w2:w2.value, z1:z1.value, z2:z2.value,
+      gameStartedAt: gameStartedAt, gameEndedAt: gameEndedAt, lastWinnerKey: lastWinnerKey
     };
 
-    btns.appendChild(pdfBtn);
-    btns.appendChild(delBtn);
-
-    div.appendChild(meta);
-    div.appendChild(btns);
-    history.appendChild(div);
-  });
-
-  renderHighscores(hist);
-}
-
-/* ---------------- Confetti ---------------- */
-function confetti(){
-  const c = document.getElementById("confetti");
-  const ctx = c.getContext("2d");
-  c.width = innerWidth; c.height = innerHeight;
-
-  const p = Array.from({length: 220}, () => ({
-    x: Math.random() * c.width,
-    y: Math.random() * c.height,
-    r: Math.random() * 6 + 2,
-    vy: Math.random() * 2 + 2
-  }));
-
-  const t = setInterval(() => {
-    ctx.clearRect(0,0,c.width,c.height);
-    p.forEach(o => {
-      ctx.beginPath();
-      ctx.arc(o.x,o.y,o.r,0,Math.PI*2);
-      ctx.fillStyle = `hsl(${Math.random()*360},100%,50%)`;
-      ctx.fill();
-      o.y += o.vy;
-      if (o.y > c.height) o.y = 0;
+    var inputs = document.querySelectorAll('input[data-t]');
+    inputs.forEach(function(i){
+      var k = i.dataset.t + i.dataset.r;
+      d[k] = i.value;
+      if (i.dataset.t === "w" || i.dataset.t === "z"){
+        d[k + "_pbonus"] = i.dataset.pbonus || "0";
+        d[k + "_prev"] = i.dataset.prevNorm || normalizeSpecial(i.value);
+      }
     });
-  }, 30);
 
-  setTimeout(() => clearInterval(t), 2800);
-}
-
-/* ---------------- Core logic ---------------- */
-function q(t,r){ return document.querySelector(`[data-t="${t}"][data-r="${r}"]`); }
-
-function normalizeSpecial(v){
-  const s = (v || "").trim();
-  if (!s) return "";
-  const c = s[0];
-  if (c === "n" || c === "N") return "N";
-  if (c === "p" || c === "P") return "P";
-  return s;
-}
-function isNumericLike(s){
-  if (s === "" || s == null) return false;
-  return !isNaN(String(s).trim());
-}
-function pointsValueFromDisplay(s){
-  const v = normalizeSpecial(s);
-  if (v === "N" || v === "P") return 0;
-  if (isNumericLike(v)) return Math.max(0, Math.min(TOTAL, parseInt(v,10)));
-  return null;
-}
-function roemFieldFor(team, round){
-  return (team === "w") ? q("rw", round) : q("rz", round);
-}
-function setPBonus(team, round, apply){
-  const ptsEl = q(team, round);
-  const roemEl = roemFieldFor(team, round);
-  const had = ptsEl.dataset.pbonus === "1";
-
-  if (apply && !had){
-    const current = parseInt(roemEl.value,10) || 0;
-    roemEl.value = String(current + 100);
-    ptsEl.dataset.pbonus = "1";
-  }
-  if (!apply && had){
-    const current = parseInt(roemEl.value,10) || 0;
-    roemEl.value = String(Math.max(0, current - 100));
-    ptsEl.dataset.pbonus = "0";
-  }
-}
-
-let suppress = false;
-
-function onScoreInput(e){
-  if (suppress) return;
-
-  if (!gameStartedAt) { gameStartedAt = nowISO(); gameEndedAt = null; }
-
-  const el = e.target;
-  const t = el.dataset.t;
-  const r = parseInt(el.dataset.r, 10);
-
-  if (t === "rw" || t === "rz"){
-    updateTotalsAndUI();
-    saveGame();
-    return;
+    localStorage.setItem(GAME_KEY, JSON.stringify(d));
   }
 
-  if (t !== "w" && t !== "z") return;
+  function loadGame(){
+    var d = JSON.parse(localStorage.getItem(GAME_KEY) || "{}");
+    w1.value = d.w1 || "";
+    w2.value = d.w2 || "";
+    z1.value = d.z1 || "";
+    z2.value = d.z2 || "";
 
-  const prevNorm = el.dataset.prevNorm || "";
-  const valNorm = normalizeSpecial(el.value);
-  const otherT = (t === "w") ? "z" : "w";
-  const otherEl = q(otherT, r);
+    gameStartedAt = d.gameStartedAt || null;
+    gameEndedAt = d.gameEndedAt || null;
+    lastWinnerKey = d.lastWinnerKey || null;
 
-  suppress = true;
-
-  if (valNorm === "") {
-    otherEl.value = "";
-  } else if (valNorm === "N" || valNorm === "P") {
-    el.value = valNorm;
-    otherEl.value = String(TOTAL);
-  } else if (isNumericLike(valNorm)) {
-    const num = Math.max(0, Math.min(TOTAL, parseInt(valNorm,10)));
-    el.value = String(num);
-    otherEl.value = String(TOTAL - num);
-  } else {
-    otherEl.value = "";
-  }
-
-  if (prevNorm === "P" && valNorm !== "P") setPBonus(t, r, false);
-  if (prevNorm !== "P" && valNorm === "P") setPBonus(t, r, true);
-
-  el.dataset.prevNorm = valNorm;
-
-  suppress = false;
-
-  updateTotalsAndUI();
-  saveGame();
-}
-
-function showWinnerOnce(w, z){
-  const name = (w > z) ? teamWijNaam() : teamZijNaam();
-  const key = `${w}|${z}|${name}`;
-  winner.textContent = `🏆 Winnaar: ${name} 🏆`;
-  if (lastWinnerKey !== key) { lastWinnerKey = key; confetti(); }
-}
-
-function updateTotalsAndUI(){
-  let tw=0, tz=0, rw=0, rz=0;
-  let ingevuld = true;
-
-  let nWij=0, nZij=0, pWij=0, pZij=0;
-
-  for (let i=1; i<=ROUNDS; i++){
-    const wDisp = q("w",i).value.trim();
-    const zDisp = q("z",i).value.trim();
-
-    const wNorm = normalizeSpecial(wDisp);
-    const zNorm = normalizeSpecial(zDisp);
-
-    if (wNorm === "N") nWij++;
-    if (zNorm === "N") nZij++;
-    if (wNorm === "P") pWij++;
-    if (zNorm === "P") pZij++;
-
-    const wPts = pointsValueFromDisplay(wDisp);
-    const zPts = pointsValueFromDisplay(zDisp);
-
-    if (wPts === null || zPts === null) ingevuld = false;
-
-    tw += (wPts ?? 0);
-    tz += (zPts ?? 0);
-
-    rw += parseInt(q("rw",i).value,10) || 0;
-    rz += parseInt(q("rz",i).value,10) || 0;
-  }
-
-  const totaalWij = tw + rw;
-  const totaalZij = tz + rz;
-
-  puntenWij.textContent = tw;
-  puntenZij.textContent = tz;
-  roemWij.textContent = rw;
-  roemZij.textContent = rz;
-  totalWij.textContent = totaalWij;
-  totalZij.textContent = totaalZij;
-
-  pointsLineSticky.textContent = `${tw} - ${tz}`;
-
-  if (ingevuld) {
-    if (!gameEndedAt) gameEndedAt = nowISO();
-    showWinnerOnce(totaalWij, totaalZij);
-  } else {
-    winner.textContent = "";
-    lastWinnerKey = null;
-    gameEndedAt = null;
-  }
-
-  document.body.dataset.nWij = String(nWij);
-  document.body.dataset.nZij = String(nZij);
-  document.body.dataset.pWij = String(pWij);
-  document.body.dataset.pZij = String(pZij);
-}
-
-/* ---------------- Save/load ---------------- */
-function saveGame(){
-  const d = {
-    w1:w1.value, w2:w2.value, z1:z1.value, z2:z2.value,
-    gameStartedAt, gameEndedAt, lastWinnerKey
-  };
-  document.querySelectorAll('input[data-t]').forEach(i => {
-    const k = i.dataset.t + i.dataset.r;
-    d[k] = i.value;
-    if (i.dataset.t === "w" || i.dataset.t === "z"){
-      d[k + "_pbonus"] = i.dataset.pbonus || "0";
-      d[k + "_prev"] = i.dataset.prevNorm || normalizeSpecial(i.value);
-    }
-  });
-  localStorage.setItem(GAME_KEY, JSON.stringify(d));
-}
-
-function loadGame(){
-  const d = JSON.parse(localStorage.getItem(GAME_KEY) || "{}");
-  w1.value = d.w1 || "";
-  w2.value = d.w2 || "";
-  z1.value = d.z1 || "";
-  z2.value = d.z2 || "";
-  gameStartedAt = d.gameStartedAt || null;
-  gameEndedAt = d.gameEndedAt || null;
-  lastWinnerKey = d.lastWinnerKey || null;
-
-  document.querySelectorAll('input[data-t]').forEach(i => {
-    const k = i.dataset.t + i.dataset.r;
-    if (d[k] !== undefined) i.value = d[k];
-    if (i.dataset.t === "w" || i.dataset.t === "z"){
-      i.dataset.pbonus = d[k + "_pbonus"] || "0";
-      i.dataset.prevNorm = d[k + "_prev"] || normalizeSpecial(i.value);
-    }
-  });
-}
-
-/* ---------------- Boot ---------------- */
-function init(){
-  // event handlers
-  document.querySelectorAll('input[data-t]').forEach(inp => inp.addEventListener("input", onScoreInput));
-  [w1,w2,z1,z2].forEach(i => i.addEventListener("input", () => { updateNames(); saveGame(); }));
-
-  // Enter = blur
-  document.querySelectorAll("input").forEach(inp => {
-    inp.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+    var inputs = document.querySelectorAll('input[data-t]');
+    inputs.forEach(function(i){
+      var k = i.dataset.t + i.dataset.r;
+      if (d[k] !== undefined) i.value = d[k];
+      if (i.dataset.t === "w" || i.dataset.t === "z"){
+        i.dataset.pbonus = d[k + "_pbonus"] || "0";
+        i.dataset.prevNorm = d[k + "_prev"] || normalizeSpecial(i.value);
+      }
     });
-  });
+  }
 
+  function loadHistory(){ return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); }
+  function saveHistory(arr){ localStorage.setItem(HIST_KEY, JSON.stringify(arr)); }
+
+  function buildHistoryEntryFromCurrentGame(){
+    var tw = parseInt(puntenWijEl.textContent,10) || 0;
+    var tz = parseInt(puntenZijEl.textContent,10) || 0;
+    var rw = parseInt(roemWijEl.textContent,10) || 0;
+    var rz = parseInt(roemZijEl.textContent,10) || 0;
+
+    var nWij = parseInt(document.body.dataset.nWij || "0",10);
+    var nZij = parseInt(document.body.dataset.nZij || "0",10);
+    var pWij = parseInt(document.body.dataset.pWij || "0",10);
+    var pZij = parseInt(document.body.dataset.pZij || "0",10);
+
+    var rounds = [];
+    for (var i=1; i<=ROUNDS; i++){
+      rounds.push({
+        r:i,
+        w:q("w",i).value,
+        rw:q("rw",i).value,
+        z:q("z",i).value,
+        rz:q("rz",i).value
+      });
+    }
+
+    var wijTeam = teamWijNaam();
+    var zijTeam = teamZijNaam();
+    var winnerTeam = ((tw+rw) > (tz+rz)) ? wijTeam : zijTeam;
+
+    var id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2);
+
+    return {
+      id:id,
+      startedAt: gameStartedAt,
+      endedAt: gameEndedAt,
+      wijTeam: wijTeam,
+      zijTeam: zijTeam,
+      pointsWij: tw, pointsZij: tz,
+      roemWij: rw, roemZij: rz,
+      totalWij: tw+rw, totalZij: tz+rz,
+      nWij:nWij, nZij:nZij, pWij:pWij, pZij:pZij,
+      winnerText: "🏆 Winnaar: " + winnerTeam + " 🏆",
+      rounds: rounds
+    };
+  }
+
+  function printGameAsPDF(entry){
+    var w = window.open("", "_blank");
+    if (!w) return;
+
+    var rowsHtml = "";
+    entry.rounds.forEach(function(r){
+      rowsHtml += "<tr>"+
+        "<td>"+r.r+"</td>"+
+        "<td>"+escapeHTML(r.w)+"</td>"+
+        "<td>"+escapeHTML(r.rw || "")+"</td>"+
+        "<td>"+escapeHTML(r.z)+"</td>"+
+        "<td>"+escapeHTML(r.rz || "")+"</td>"+
+      "</tr>";
+    });
+
+    var html =
+      "<!doctype html><html lang='nl'><head>"+
+      "<meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"+
+      "<title>René’s Telraam - PDF</title>"+
+      "<style>"+
+      "body{font-family:Arial,sans-serif;margin:24px;color:#111;}h1{margin:0 0 8px;}"+
+      ".box{border:1px solid #ddd;padding:12px;border-radius:10px;margin-bottom:14px;}"+
+      "table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:6px;text-align:center;}"+
+      "th{background:#f3f3f3}.small{font-size:12px;color:#333}@media print{.noprint{display:none}}"+
+      "</style></head><body>"+
+      "<div class='noprint' style='margin-bottom:12px;'>Tip: kies <b>“Bewaar als PDF”</b>.</div>"+
+      "<h1>René’s Telraam</h1>"+
+      "<div class='small'><b>"+escapeHTML(entry.wijTeam)+"</b> - <b>"+escapeHTML(entry.zijTeam)+"</b><br>"+
+      "Begin: "+fmtDateTime(entry.startedAt)+"<br>Einde: "+fmtDateTime(entry.endedAt)+
+      "</div>"+
+      "<div class='box'><b>Scores</b><br>"+
+      "Punten: "+entry.pointsWij+" - "+entry.pointsZij+"<br>"+
+      "Roem: "+entry.roemWij+" - "+entry.roemZij+"<br>"+
+      "Totaal: "+entry.totalWij+" - "+entry.totalZij+"<br>"+
+      "N: "+entry.nWij+" - "+entry.nZij+" | P: "+entry.pWij+" - "+entry.pZij+"<br><br>"+
+      escapeHTML(entry.winnerText)+
+      "</div>"+
+      "<div class='box'><b>Rondes</b>"+
+      "<table><thead><tr><th>R</th><th>Wij</th><th>Roem Wij</th><th>Zij</th><th>Roem Zij</th></tr></thead>"+
+      "<tbody>"+rowsHtml+"</tbody></table></div>"+
+      "<script>window.onload=function(){window.print();};<\/script>"+
+      "</body></html>";
+
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+  function renderHighscores(hist){
+    highscoresEl.innerHTML = "";
+
+    function card(title, content){
+      var d = document.createElement("div");
+      d.className = "badge";
+      var t = document.createElement("div");
+      t.style.fontWeight = "900";
+      t.style.marginBottom = "6px";
+      t.textContent = title;
+      var c = document.createElement("div");
+      c.innerHTML = content;
+      d.appendChild(t);
+      d.appendChild(c);
+      highscoresEl.appendChild(d);
+    }
+
+    if (!hist.length){
+      card("Nog geen highscores", "Speel een potje en druk daarna op <b>Nieuw potje</b> om het op te slaan.");
+      return;
+    }
+
+    // stats per teamnaam (team = 2 spelers)
+    var teamStats = new Map();
+    function addTeam(teamName, points, roem, nCount, pCount){
+      var key = teamName || "Onbekend";
+      if (!teamStats.has(key)){
+        teamStats.set(key, { team:key, bestPoints:-Infinity, worstPoints:Infinity, bestRoem:-Infinity, nTotal:0, pTotal:0 });
+      }
+      var s = teamStats.get(key);
+      s.bestPoints = Math.max(s.bestPoints, points);
+      s.worstPoints = Math.min(s.worstPoints, points);
+      s.bestRoem = Math.max(s.bestRoem, roem);
+      s.nTotal += nCount;
+      s.pTotal += pCount;
+    }
+
+    hist.forEach(function(g){
+      addTeam(g.wijTeam, g.pointsWij, g.roemWij, g.nWij, g.pWij);
+      addTeam(g.zijTeam, g.pointsZij, g.roemZij, g.nZij, g.pZij);
+    });
+
+    var arr = Array.from(teamStats.values());
+    function top(cmp){ return arr.slice().sort(cmp)[0]; }
+
+    var bestPoints = top(function(a,b){ return b.bestPoints - a.bestPoints; });
+    var worstPoints = top(function(a,b){ return a.worstPoints - b.worstPoints; });
+    var bestRoem = top(function(a,b){ return b.bestRoem - a.bestRoem; });
+    var mostN = top(function(a,b){ return b.nTotal - a.nTotal; });
+    var mostP = top(function(a,b){ return b.pTotal - a.pTotal; });
+
+    card("Hoogste punten (zonder roem)", "<b>"+escapeHTML(bestPoints.team)+"</b><br>"+bestPoints.bestPoints+" punten");
+    card("Laagste punten (zonder roem)", "<b>"+escapeHTML(worstPoints.team)+"</b><br>"+worstPoints.worstPoints+" punten");
+    card("Meeste roem", "<b>"+escapeHTML(bestRoem.team)+"</b><br>"+bestRoem.bestRoem+" roem");
+    card("Meeste keer N", "<b>"+escapeHTML(mostN.team)+"</b><br>"+mostN.nTotal+"× N");
+    card("Meeste keer P", "<b>"+escapeHTML(mostP.team)+"</b><br>"+mostP.pTotal+"× P");
+  }
+
+  function renderHistory(){
+    var hist = loadHistory();
+    historyEl.innerHTML = "";
+
+    hist.forEach(function(entry){
+      var item = document.createElement("div");
+      item.className = "histItem";
+
+      var meta = document.createElement("div");
+      meta.className = "histMeta";
+      meta.innerHTML =
+        "<div style='font-weight:900;'>"+escapeHTML(entry.wijTeam)+" - "+escapeHTML(entry.zijTeam)+"</div>"+
+        "<div style='opacity:.85; margin-top:2px;'>Start: "+fmtDateTime(entry.startedAt)+"<br>Eind: "+fmtDateTime(entry.endedAt)+"</div>"+
+        "<div style='margin-top:6px;'>"+
+          "Punten: <b>"+entry.pointsWij+"</b> - <b>"+entry.pointsZij+"</b> | "+
+          "Roem: <b>"+entry.roemWij+"</b> - <b>"+entry.roemZij+"</b> | "+
+          "Totaal: <b>"+entry.totalWij+"</b> - <b>"+entry.totalZij+"</b>"+
+        "</div>"+
+        "<div style='margin-top:4px; opacity:.9;'>N: "+entry.nWij+" - "+entry.nZij+" | P: "+entry.pWij+" - "+entry.pZij+"</div>"+
+        "<div style='margin-top:6px;'>"+escapeHTML(entry.winnerText)+"</div>";
+
+      var btns = document.createElement("div");
+      btns.className = "histBtns";
+
+      var pdfBtn = document.createElement("button");
+      pdfBtn.textContent = "📄 PDF";
+      pdfBtn.onclick = function(){ printGameAsPDF(entry); };
+
+      var delBtn = document.createElement("button");
+      delBtn.textContent = "🗑️ Verwijder";
+      delBtn.onclick = function(){
+        var next = loadHistory().filter(function(x){ return x.id !== entry.id; });
+        saveHistory(next);
+        renderHistory();
+        renderHighscores(next);
+      };
+
+      btns.appendChild(pdfBtn);
+      btns.appendChild(delBtn);
+
+      item.appendChild(meta);
+      item.appendChild(btns);
+
+      historyEl.appendChild(item);
+    });
+
+    renderHighscores(hist);
+  }
+
+  function newGame(){
+    if (winnerEl.textContent && gameStartedAt && gameEndedAt){
+      var entry = buildHistoryEntryFromCurrentGame();
+      var hist = loadHistory();
+      hist.unshift(entry);
+      saveHistory(hist);
+    }
+    localStorage.removeItem(GAME_KEY);
+    location.reload();
+  }
+
+  // Hook events
+  document.querySelectorAll('input[data-t]').forEach(function(inp){
+    inp.addEventListener("input", onScoreInput);
+  });
+  [w1,w2,z1,z2].forEach(function(inp){
+    inp.addEventListener("input", function(){ updateNames(); saveGame(); });
+  });
+  newGameBtn.addEventListener("click", newGame);
+
+  // Boot
   loadGame();
   updateNames();
   updateTotalsAndUI();
-  renderHistoryAndHighscores();
-}
+  renderHistory();
 
-init();
+})();
 </script>
+
 </body>
 </html>

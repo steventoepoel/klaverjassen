@@ -55,6 +55,7 @@ body{
   padding:10px;
   -webkit-tap-highlight-color:transparent;
   overscroll-behavior:none;
+  padding-bottom:86px; /* ruimte voor N/P balk */
 }
 
 /* Sticky header */
@@ -79,7 +80,7 @@ body{
   box-shadow:var(--shadow);
 }
 .headerLogo{
-  width:72px;              /* breder */
+  width:86px;              /* breder */
   height:54px;
   border-radius:14px;
   object-fit:contain;      /* niet afsnijden */
@@ -139,8 +140,8 @@ input:focus{ box-shadow:0 0 0 3px rgba(211,47,47,.25); }
 
 .nameInput{
   width: calc(50% - 8px);
-  max-width: 280px;
-  min-width: 160px;
+  max-width: 320px;
+  min-width: 220px;
   text-align:left;
   padding-left:14px;
 }
@@ -206,7 +207,7 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
 #toast{
   position:fixed;
   left:50%;
-  bottom:18px;
+  bottom:88px; /* boven N/P balk */
   transform:translateX(-50%);
   background:rgba(0,0,0,.85);
   color:#fff;
@@ -236,6 +237,46 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
   font-weight:900;
 }
 .bigTotals td, .bigTotals th{ padding-top:10px; padding-bottom:10px; }
+
+/* N/P balk */
+#npBar{
+  position:fixed;
+  left:10px;
+  right:10px;
+  bottom:10px;
+  z-index:9998;
+  background:var(--card);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  border-radius:16px;
+  padding:10px;
+  display:none;
+}
+#npBar .row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+#npBar .hint{
+  flex:1;
+  font-weight:800;
+  opacity:.85;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#npBar .mini{
+  width:auto;
+  padding:10px 14px;
+  border-radius:14px;
+  font-weight:900;
+  font-size:16px;
+}
+#npBar .mini.secondary{
+  background:transparent;
+  color:var(--text);
+  border:1px solid var(--line);
+}
 </style>
 </head>
 
@@ -260,7 +301,7 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
   <input id="z1" class="nameInput" placeholder="Speler 1" autocomplete="off">
   <input id="z2" class="nameInput" placeholder="Speler 2" autocomplete="off">
   <div class="smallNote">
-    Punten: typ een getal, of <b>N</b>/<b>P</b>.
+    Punten: typ een getal, of gebruik de knoppen <b>N</b>/<b>P</b> onderaan.
   </div>
 </div>
 
@@ -277,7 +318,6 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
     </thead>
     <tbody id="rows"></tbody>
     <tfoot>
-      <!-- totaal per kolom -->
       <tr class="colTotals">
         <th style="text-align:left;">Som</th>
         <th><span id="puntenWij">0</span></th>
@@ -285,7 +325,6 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
         <th><span id="puntenZij">0</span></th>
         <th><span id="roemZij">0</span></th>
       </tr>
-      <!-- grote eindtotalen -->
       <tr class="bigTotals">
         <th style="text-align:left;">Totaal</th>
         <td colspan="2"><span id="totalWij">0</span></td>
@@ -310,10 +349,21 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
 </div>
 
 <div id="toast"></div>
+
+<div id="npBar">
+  <div class="row">
+    <div class="hint" id="npHint">Selecteer een puntenvakje…</div>
+    <button class="mini secondary" id="npClear">Leeg</button>
+    <button class="mini" id="npN">N</button>
+    <button class="mini" id="npP">P</button>
+  </div>
+</div>
+
 <canvas id="confetti"></canvas>
 
 <script>
 (function(){
+  // DOM
   var installBtn = document.getElementById("installBtn");
 
   var w1 = document.getElementById("w1");
@@ -343,9 +393,16 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
 
   var toastEl = document.getElementById("toast");
 
+  var npBar = document.getElementById("npBar");
+  var npHint = document.getElementById("npHint");
+  var npN = document.getElementById("npN");
+  var npP = document.getElementById("npP");
+  var npClear = document.getElementById("npClear");
+
   var confettiCanvas = document.getElementById("confetti");
   var confettiCtx = confettiCanvas.getContext("2d");
 
+  // PWA install
   var deferredPrompt = null;
   function isStandaloneMode(){
     return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
@@ -358,14 +415,17 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
   installBtn.addEventListener("click", function(){ if (deferredPrompt) deferredPrompt.prompt(); });
   if (isStandaloneMode()) installBtn.style.display = "none";
 
+  // Constants
   var TOTAL = 162, ROUNDS = 16;
-  var GAME_KEY = "rene_telraam_game_v10";
+  var GAME_KEY = "rene_telraam_game_v11";
   var HIST_KEY = "rene_telraam_history_v2";
 
   var suppress = false;
   var lastWinnerKey = null;
   var gameStartedAt = null;
   var gameEndedAt = null;
+
+  var focusedPointsInput = null;
 
   function showToast(msg){
     toastEl.textContent = msg;
@@ -376,6 +436,12 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
     }, 2600);
   }
 
+  function nowISO(){ return new Date().toISOString(); }
+  function pad(n){ n = String(n); return n.length<2 ? "0"+n : n; }
+  function fmtDateTime(iso){
+    var d = new Date(iso);
+    return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+  }
   function escapeHTML(s){
     s = String(s == null ? "" : s);
     return s.replace(/[&<>"']/g, function(c){
@@ -448,14 +514,15 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
     }
   }
 
+  // Build rows + separators
   for (var i=1; i<=ROUNDS; i++){
     var tr = document.createElement("tr");
     tr.innerHTML =
       '<td>'+i+'</td>'+
-      '<td><input class="inp-wij" data-t="w" data-r="'+i+'" type="text" inputmode="text" pattern="[0-9]*" autocapitalize="characters" spellcheck="false"></td>'+
-      '<td><input class="inp-wijroem" data-t="rw" data-r="'+i+'" type="text" inputmode="text" pattern="[0-9]*" autocapitalize="off" spellcheck="false"></td>'+
-      '<td><input class="inp-zij" data-t="z" data-r="'+i+'" type="text" inputmode="text" pattern="[0-9]*" autocapitalize="characters" spellcheck="false"></td>'+
-      '<td><input class="inp-zijroem" data-t="rz" data-r="'+i+'" type="text" inputmode="text" pattern="[0-9]*" autocapitalize="off" spellcheck="false"></td>';
+      '<td><input class="inp-wij" data-t="w" data-r="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="characters" spellcheck="false"></td>'+
+      '<td><input class="inp-wijroem" data-t="rw" data-r="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" spellcheck="false"></td>'+
+      '<td><input class="inp-zij" data-t="z" data-r="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="characters" spellcheck="false"></td>'+
+      '<td><input class="inp-zijroem" data-t="rz" data-r="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" spellcheck="false"></td>';
     rows.appendChild(tr);
 
     if (i % 4 === 0 && i < 16){
@@ -466,6 +533,7 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
     }
   }
 
+  // Enter = blur
   document.addEventListener("keydown", function(e){
     if (e.key === "Enter" && e.target && e.target.tagName === "INPUT"){
       e.preventDefault();
@@ -515,14 +583,15 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
 
     var timer = setInterval(function(){
       confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
-      parts.forEach(function(o){
+      for (var j=0; j<parts.length; j++){
+        var o = parts[j];
         confettiCtx.beginPath();
         confettiCtx.arc(o.x,o.y,o.r,0,Math.PI*2);
         confettiCtx.fillStyle = "hsl(" + (Math.random()*360) + ",100%,50%)";
         confettiCtx.fill();
         o.y += o.vy;
         if (o.y > confettiCanvas.height) o.y = 0;
-      });
+      }
     }, 30);
 
     setTimeout(function(){ clearInterval(timer); }, 2600);
@@ -626,8 +695,8 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
     if (valNorm === ""){
       otherEl.value = "";
     } else if (valNorm === "N" || valNorm === "P"){
-      el.value = valNorm;
-      otherEl.value = String(TOTAL);
+      el.value = valNorm;              // letter zichtbaar
+      otherEl.value = String(TOTAL);   // ander krijgt 162
     } else if (isNumericLike(valNorm)){
       var num = parseInt(valNorm,10);
       if (num < 0) num = 0;
@@ -638,6 +707,7 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
       otherEl.value = "";
     }
 
+    // P-bonus roem (+100)
     if (prevNorm === "P" && valNorm !== "P") setPBonus(t, r, false);
     if (prevNorm !== "P" && valNorm === "P") setPBonus(t, r, true);
 
@@ -657,14 +727,15 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
     };
 
     var inputs = document.querySelectorAll('input[data-t]');
-    inputs.forEach(function(i){
-      var k = i.dataset.t + i.dataset.r;
-      d[k] = i.value;
-      if (i.dataset.t === "w" || i.dataset.t === "z"){
-        d[k + "_pbonus"] = i.dataset.pbonus || "0";
-        d[k + "_prev"] = i.dataset.prevNorm || normalizeSpecial(i.value);
+    for (var i=0; i<inputs.length; i++){
+      var inp = inputs[i];
+      var k = inp.dataset.t + inp.dataset.r;
+      d[k] = inp.value;
+      if (inp.dataset.t === "w" || inp.dataset.t === "z"){
+        d[k + "_pbonus"] = inp.dataset.pbonus || "0";
+        d[k + "_prev"] = inp.dataset.prevNorm || normalizeSpecial(inp.value);
       }
-    });
+    }
 
     localStorage.setItem(GAME_KEY, JSON.stringify(d));
   }
@@ -675,41 +746,275 @@ canvas{ position:fixed; top:0; left:0; pointer-events:none; }
     w2.value = d.w2 || "";
     z1.value = d.z1 || "";
     z2.value = d.z2 || "";
+
+    gameStartedAt = d.gameStartedAt || null;
+    gameEndedAt = d.gameEndedAt || null;
     lastWinnerKey = d.lastWinnerKey || null;
 
     var inputs = document.querySelectorAll('input[data-t]');
-    inputs.forEach(function(i){
-      var k = i.dataset.t + i.dataset.r;
-      if (d[k] !== undefined) i.value = d[k];
-      if (i.dataset.t === "w" || i.dataset.t === "z"){
-        i.dataset.pbonus = d[k + "_pbonus"] || "0";
-        i.dataset.prevNorm = d[k + "_prev"] || normalizeSpecial(i.value);
+    for (var i=0; i<inputs.length; i++){
+      var inp = inputs[i];
+      var k = inp.dataset.t + inp.dataset.r;
+      if (d[k] !== undefined) inp.value = d[k];
+      if (inp.dataset.t === "w" || inp.dataset.t === "z"){
+        inp.dataset.pbonus = d[k + "_pbonus"] || "0";
+        inp.dataset.prevNorm = d[k + "_prev"] || normalizeSpecial(inp.value);
       }
-    });
+    }
   }
 
-  // historie/highscores blijven (kort gehouden)
+  // History storage
   function loadHistory(){ return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); }
-  function renderHighscores(){ /* leeg gelaten in deze snippet; jouw eerdere versie blijft werken */ }
+  function saveHistory(arr){ localStorage.setItem(HIST_KEY, JSON.stringify(arr)); }
 
-  function renderHistory(){ historyEl.innerHTML = ""; /* idem */ }
+  function buildHistoryEntryFromCurrentGame(){
+    var tw = parseInt(puntenWijEl.textContent,10) || 0;
+    var tz = parseInt(puntenZijEl.textContent,10) || 0;
+    var rw = parseInt(roemWijEl.textContent,10) || 0;
+    var rz = parseInt(roemZijEl.textContent,10) || 0;
+
+    var nWij = parseInt(document.body.dataset.nWij || "0",10);
+    var nZij = parseInt(document.body.dataset.nZij || "0",10);
+    var pWij = parseInt(document.body.dataset.pWij || "0",10);
+    var pZij = parseInt(document.body.dataset.pZij || "0",10);
+
+    var rounds = [];
+    for (var i=1; i<=ROUNDS; i++){
+      rounds.push({ r:i, w:q("w",i).value, rw:q("rw",i).value, z:q("z",i).value, rz:q("rz",i).value });
+    }
+
+    var wijTeam = teamWijNaam();
+    var zijTeam = teamZijNaam();
+    var winnerTeam = ((tw+rw) > (tz+rz)) ? wijTeam : zijTeam;
+    var id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2);
+
+    return {
+      id:id,
+      startedAt: gameStartedAt,
+      endedAt: gameEndedAt,
+      wijTeam: wijTeam,
+      zijTeam: zijTeam,
+      pointsWij: tw, pointsZij: tz,
+      roemWij: rw, roemZij: rz,
+      totalWij: tw+rw, totalZij: tz+rz,
+      nWij:nWij, nZij:nZij, pWij:pWij, pZij:pZij,
+      winnerText: "🏆 Winnaar: " + winnerTeam + " 🏆",
+      rounds: rounds
+    };
+  }
+
+  function printGameAsPDF(entry){
+    var w = window.open("", "_blank");
+    if (!w) return;
+
+    var rowsHtml = "";
+    for (var i=0; i<entry.rounds.length; i++){
+      var r = entry.rounds[i];
+      rowsHtml += "<tr><td>"+r.r+"</td><td>"+escapeHTML(r.w)+"</td><td>"+escapeHTML(r.rw||"")+"</td><td>"+escapeHTML(r.z)+"</td><td>"+escapeHTML(r.rz||"")+"</td></tr>";
+    }
+
+    var html =
+      "<!doctype html><html lang='nl'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"+
+      "<title>René’s Telraam - PDF</title><style>"+
+      "body{font-family:Arial,sans-serif;margin:24px;color:#111;}h1{margin:0 0 8px;}"+
+      ".box{border:1px solid #ddd;padding:12px;border-radius:10px;margin-bottom:14px;}"+
+      "table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:6px;text-align:center;}th{background:#f3f3f3}"+
+      ".small{font-size:12px;color:#333}@media print{.noprint{display:none}}"+
+      "</style></head><body>"+
+      "<div class='noprint' style='margin-bottom:12px;'>Tip: kies <b>“Bewaar als PDF”</b>.</div>"+
+      "<h1>René’s Telraam</h1>"+
+      "<div class='small'><b>"+escapeHTML(entry.wijTeam)+"</b> - <b>"+escapeHTML(entry.zijTeam)+"</b><br>"+
+      "Begin: "+fmtDateTime(entry.startedAt)+"<br>Einde: "+fmtDateTime(entry.endedAt)+"</div>"+
+      "<div class='box'><b>Scores</b><br>"+
+      "Punten: "+entry.pointsWij+" - "+entry.pointsZij+"<br>"+
+      "Roem: "+entry.roemWij+" - "+entry.roemZij+"<br>"+
+      "Totaal: "+entry.totalWij+" - "+entry.totalZij+"<br>"+
+      "N: "+entry.nWij+" - "+entry.nZij+" | P: "+entry.pWij+" - "+entry.pZij+"<br><br>"+
+      escapeHTML(entry.winnerText)+"</div>"+
+      "<div class='box'><b>Rondes</b><table><thead><tr><th>R</th><th>Wij</th><th>Roem Wij</th><th>Zij</th><th>Roem Zij</th></tr></thead>"+
+      "<tbody>"+rowsHtml+"</tbody></table></div>"+
+      "<script>window.onload=function(){window.print();};<\/script></body></html>";
+
+    w.document.open(); w.document.write(html); w.document.close();
+  }
+
+  function renderHighscores(hist){
+    highscoresEl.innerHTML = "";
+
+    function card(title, content){
+      var d = document.createElement("div");
+      d.className = "badge";
+      var tt = document.createElement("div");
+      tt.style.fontWeight = "900";
+      tt.style.marginBottom = "6px";
+      tt.textContent = title;
+      var cc = document.createElement("div");
+      cc.innerHTML = content;
+      d.appendChild(tt);
+      d.appendChild(cc);
+      highscoresEl.appendChild(d);
+    }
+
+    if (!hist.length){
+      card("Nog geen highscores", "Speel een potje en druk daarna op <b>Nieuw potje</b> om het op te slaan.");
+      return;
+    }
+
+    var teamStats = new Map();
+    function addTeam(teamName, points, roem, nCount, pCount){
+      var key = teamName || "Onbekend";
+      if (!teamStats.has(key)){
+        teamStats.set(key, { team:key, bestPoints:-Infinity, worstPoints:Infinity, bestRoem:-Infinity, nTotal:0, pTotal:0 });
+      }
+      var s = teamStats.get(key);
+      s.bestPoints = Math.max(s.bestPoints, points);
+      s.worstPoints = Math.min(s.worstPoints, points);
+      s.bestRoem = Math.max(s.bestRoem, roem);
+      s.nTotal += nCount;
+      s.pTotal += pCount;
+    }
+
+    for (var i=0; i<hist.length; i++){
+      var g = hist[i];
+      addTeam(g.wijTeam, g.pointsWij, g.roemWij, g.nWij, g.pWij);
+      addTeam(g.zijTeam, g.pointsZij, g.roemZij, g.nZij, g.pZij);
+    }
+
+    var arr = Array.from(teamStats.values());
+    function top(cmp){ return arr.slice().sort(cmp)[0]; }
+
+    var bestPoints = top(function(a,b){ return b.bestPoints - a.bestPoints; });
+    var worstPoints = top(function(a,b){ return a.worstPoints - b.worstPoints; });
+    var bestRoem = top(function(a,b){ return b.bestRoem - a.bestRoem; });
+    var mostN = top(function(a,b){ return b.nTotal - a.nTotal; });
+    var mostP = top(function(a,b){ return b.pTotal - a.pTotal; });
+
+    card("Hoogste punten (zonder roem)", "<b>"+escapeHTML(bestPoints.team)+"</b><br>"+bestPoints.bestPoints+" punten");
+    card("Laagste punten (zonder roem)", "<b>"+escapeHTML(worstPoints.team)+"</b><br>"+worstPoints.worstPoints+" punten");
+    card("Meeste roem", "<b>"+escapeHTML(bestRoem.team)+"</b><br>"+bestRoem.bestRoem+" roem");
+    card("Meeste keer N", "<b>"+escapeHTML(mostN.team)+"</b><br>"+mostN.nTotal+"× N");
+    card("Meeste keer P", "<b>"+escapeHTML(mostP.team)+"</b><br>"+mostP.pTotal+"× P");
+  }
+
+  function renderHistory(){
+    var hist = loadHistory();
+    historyEl.innerHTML = "";
+
+    for (var i=0; i<hist.length; i++){
+      (function(entry){
+        var item = document.createElement("div");
+        item.className = "histItem";
+
+        var meta = document.createElement("div");
+        meta.className = "histMeta";
+        meta.innerHTML =
+          "<div style='font-weight:900;'>"+escapeHTML(entry.wijTeam)+" - "+escapeHTML(entry.zijTeam)+"</div>"+
+          "<div style='opacity:.85; margin-top:2px;'>Start: "+fmtDateTime(entry.startedAt)+"<br>Eind: "+fmtDateTime(entry.endedAt)+"</div>"+
+          "<div style='margin-top:6px;'>Punten: <b>"+entry.pointsWij+"</b> - <b>"+entry.pointsZij+"</b> | Roem: <b>"+entry.roemWij+"</b> - <b>"+entry.roemZij+"</b> | Totaal: <b>"+entry.totalWij+"</b> - <b>"+entry.totalZij+"</b></div>"+
+          "<div style='margin-top:4px; opacity:.9;'>N: "+entry.nWij+" - "+entry.nZij+" | P: "+entry.pWij+" - "+entry.pZij+"</div>"+
+          "<div style='margin-top:6px;'>"+escapeHTML(entry.winnerText)+"</div>";
+
+        var btns = document.createElement("div");
+        btns.className = "histBtns";
+
+        var pdfBtn = document.createElement("button");
+        pdfBtn.textContent = "📄 PDF";
+        pdfBtn.onclick = function(){ printGameAsPDF(entry); };
+
+        var delBtn = document.createElement("button");
+        delBtn.textContent = "🗑️ Verwijder";
+        delBtn.onclick = function(){
+          var next = loadHistory().filter(function(x){ return x.id !== entry.id; });
+          saveHistory(next);
+          renderHistory();
+          renderHighscores(next);
+        };
+
+        btns.appendChild(pdfBtn);
+        btns.appendChild(delBtn);
+
+        item.appendChild(meta);
+        item.appendChild(btns);
+
+        historyEl.appendChild(item);
+      })(hist[i]);
+    }
+
+    renderHighscores(hist);
+  }
 
   function newGame(){
+    // alleen opslaan als er echt een winnaar bekend is (en geen 81-81 fout)
+    var allValid = true;
+    for (var i=1; i<=ROUNDS; i++){
+      if (!validateNoEqualRound(i)) { allValid = false; break; }
+    }
+    if (winnerEl.textContent && gameStartedAt && gameEndedAt && allValid){
+      var entry = buildHistoryEntryFromCurrentGame();
+      var hist = loadHistory();
+      hist.unshift(entry);
+      saveHistory(hist);
+    }
+
     localStorage.removeItem(GAME_KEY);
     location.reload();
   }
 
-  document.querySelectorAll('input[data-t]').forEach(function(inp){
-    inp.addEventListener("input", onScoreInput);
-  });
+  // N/P balk logic
+  function showNPBarFor(inp){
+    focusedPointsInput = inp;
+    npBar.style.display = "block";
+    var r = inp.dataset.r;
+    var t = inp.dataset.t === "w" ? "Wij" : "Zij";
+    npHint.textContent = "Ronde " + r + " • " + t + " punten";
+  }
+  function hideNPBarIfNeeded(){
+    setTimeout(function(){
+      // Als focus naar een ander puntenveld gaat, komt hij meteen weer terug.
+      // Als focus weg is, hide.
+      var active = document.activeElement;
+      if (!active || !active.dataset || (active.dataset.t !== "w" && active.dataset.t !== "z")){
+        focusedPointsInput = null;
+        npBar.style.display = "none";
+        npHint.textContent = "Selecteer een puntenvakje…";
+      }
+    }, 120);
+  }
+  function applyNP(value){
+    if (!focusedPointsInput) return;
+    focusedPointsInput.value = value;
+    // trigger input logic
+    focusedPointsInput.dispatchEvent(new Event("input", { bubbles:true }));
+    focusedPointsInput.focus();
+  }
+
+  npN.onclick = function(){ applyNP("N"); };
+  npP.onclick = function(){ applyNP("P"); };
+  npClear.onclick = function(){ applyNP(""); };
+
+  // Hook events
+  var inputs = document.querySelectorAll('input[data-t]');
+  for (var i=0; i<inputs.length; i++){
+    inputs[i].addEventListener("input", onScoreInput);
+
+    // puntenvelden: N/P bar
+    if (inputs[i].dataset.t === "w" || inputs[i].dataset.t === "z"){
+      inputs[i].addEventListener("focus", function(e){ showNPBarFor(e.target); });
+      inputs[i].addEventListener("blur", function(){ hideNPBarIfNeeded(); });
+    }
+  }
+
   [w1,w2,z1,z2].forEach(function(inp){
     inp.addEventListener("input", function(){ updateNames(); saveGame(); });
   });
+
   newGameBtn.addEventListener("click", newGame);
 
+  // Boot
   loadGame();
   updateNames();
   updateTotalsAndUI();
+  renderHistory();
 
 })();
 </script>

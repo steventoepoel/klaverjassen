@@ -50,9 +50,13 @@
   const isNumericLike = (s) => s !== "" && s != null && !isNaN(String(s).trim());
   const clampInt = (n, min, max) => Math.max(min, Math.min(max, n));
 
+  // ✅ AANGEPAST:
+  // - N (Nat): team 0 punten
+  // - P (Pit): team 162 punten
   const pointsValueFromDisplay = (raw) => {
     const v = normalizeSpecial(raw);
-    if (v === "N" || v === "P") return 0;
+    if (v === "N") return 0;
+    if (v === "P") return TOTAL;
     if (isNumericLike(v)) return clampInt(parseInt(v, 10), 0, TOTAL);
     return null;
   };
@@ -325,7 +329,7 @@
   const showReloadBar = () => {
     const bar = ensureReloadBar();
     bar.style.display = "block";
-    adjustBars(); // zodat hij netjes boven keyboard/safe-area blijft
+    adjustBars();
   };
 
   /* ---------- Service Worker ---------- */
@@ -340,7 +344,6 @@
           if (!nw) return;
           nw.addEventListener("statechange", () => {
             if (nw.state === "installed" && navigator.serviceWorker.controller) {
-              // Tip 9: herlaadknop onderaan
               showToast("Nieuwe versie klaar ✅");
               showReloadBar();
             }
@@ -370,7 +373,6 @@
       roemBar.style.bottom = `${10 + kh + npOffset}px`;
     else roemBar.style.bottom = "10px";
 
-    // reloadbar altijd helemaal onderaan, maar wel boven keyboard
     if (reloadBar && reloadBar.style.display === "block") {
       reloadBar.style.bottom = `${10 + kh}px`;
     }
@@ -467,9 +469,8 @@
     const prevWasN = prevNorm === "N";
     const nowIsN = nowNorm === "N";
 
-    // From not-N to N: move roemThis -> roemOther (ONLY if roemThis is valid)  [Tip 6]
+    // From not-N to N: move roemThis -> roemOther (ONLY if roemThis is valid)
     if (!prevWasN && nowIsN) {
-      // clear older transfer first (safety)
       const old = parseInt(ptsEl.dataset.nTransfer || "0", 10) || 0;
       if (old > 0) {
         const oth = readRoemOk(roemOther);
@@ -479,7 +480,6 @@
 
       const pr = parseRoem(roemThis.value);
       if (!pr.ok) {
-        // roem is ongeldig: niet verplaatsen
         ptsEl.dataset.nTransfer = "0";
         return;
       }
@@ -489,9 +489,7 @@
         const otherVal = readRoemOk(roemOther);
         roemOther.value = String(otherVal + amount);
 
-        // clear nat-team roem field visibly
         roemThis.value = "";
-
         ptsEl.dataset.nTransfer = String(amount);
 
         roemOther.dispatchEvent(new Event("input", { bubbles: true }));
@@ -615,7 +613,6 @@
     document.body.dataset.pitw = String(pitW);
     document.body.dataset.pitz = String(pitZ);
 
-    // winner only when all rounds filled & no invalid
     if (filled && !anyInvalid) {
       if (!gameEndedAt) gameEndedAt = nowISO();
       showWinnerOnce(totW, totZ);
@@ -634,7 +631,6 @@
     const w = confettiCanvas.width;
     const h = confettiCanvas.height;
 
-    // Tip 4: vaste kleur per confetti-deeltje (geen flikkeren)
     const parts = Array.from({ length: 220 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
@@ -658,12 +654,10 @@
     setTimeout(() => clearInterval(timer), 2600);
   };
 
-  // Tip 3: gelijkspel melding + geen "Zij wint" bij gelijk
   const showWinnerOnce = (tw, tz) => {
     if (tw === tz) {
       const key = `TIE|${tw}|${tz}`;
       winnerEl.textContent = "Dat is wel heel bijzonder! Een gelijkspel! 🤯";
-      // geen confetti bij gelijkspel
       lastWinnerKey = key;
       return;
     }
@@ -1044,17 +1038,14 @@ ${escapeHTML(entry.winnerText)}
     return true;
   };
 
-  // Tip 8: nieuw potje zonder page reload
   const resetGameInPlace = () => {
     suppress = true;
 
-    // names leeg (mag ook laten staan; maar meestal nieuw potje = nieuw team)
     w1.value = "";
     w2.value = "";
     z1.value = "";
     z2.value = "";
 
-    // alle score inputs leeg + datasets resetten
     document.querySelectorAll("input[data-t]").forEach((inp) => {
       inp.value = "";
       inp.classList.remove("inputError");
@@ -1066,26 +1057,23 @@ ${escapeHTML(entry.winnerText)}
       }
     });
 
-    // state reset
     lastWinnerKey = null;
     gameStartedAt = null;
     gameEndedAt = null;
     winnerEl.textContent = "";
 
-    // bars weg
     focusedPointsInput = null;
     focusedRoemInput = null;
     npBar.style.display = "none";
     roemBar.style.display = "none";
 
-    // storage reset
     localStorage.removeItem(GAME_KEY);
 
     suppress = false;
 
     updateNames();
     recompute();
-    saveGame(); // start "lege" state opnieuw op
+    saveGame();
     adjustBars();
   };
 
@@ -1123,7 +1111,6 @@ ${escapeHTML(entry.winnerText)}
       return;
     }
 
-    // points inputs
     if (t !== "w" && t !== "z") return;
 
     const prevNorm = el.dataset.prevNorm || "";
@@ -1136,9 +1123,14 @@ ${escapeHTML(entry.winnerText)}
 
     if (valNorm === "") {
       otherEl.value = "";
-    } else if (valNorm === "N" || valNorm === "P") {
-      el.value = valNorm;
+    } else if (valNorm === "N") {
+      // Nat: N blijft staan, team = 0, tegenstander = 162
+      el.value = "N";
       otherEl.value = String(TOTAL);
+    } else if (valNorm === "P") {
+      // ✅ Pit: P blijft staan, team = 162, tegenstander = 0
+      el.value = "P";
+      otherEl.value = "0";
     } else if (isNumericLike(valNorm)) {
       const num = clampInt(parseInt(valNorm, 10), 0, TOTAL);
       el.value = String(num);
@@ -1148,11 +1140,11 @@ ${escapeHTML(entry.winnerText)}
       otherEl.value = "";
     }
 
-    // Pit bonus (+100 roem) on points input
+    // Pit bonus (+100 roem) on points input blijft gelden
     if (prevNorm === "P" && valNorm !== "P") setPitBonus(t, r, false);
     if (prevNorm !== "P" && valNorm === "P") setPitBonus(t, r, true);
 
-    // Visible roem transfer when switching to/from N (met Tip 6 safeguard)
+    // Nat roem transfer (alleen bij N)
     applyNatRoemTransferVisual(t, r, prevNorm, valNorm);
 
     el.dataset.prevNorm = valNorm;
@@ -1169,13 +1161,11 @@ ${escapeHTML(entry.winnerText)}
     inp.addEventListener("input", onScoreInput)
   );
 
-  // points focus => npBar
   document.querySelectorAll('input[data-t="w"], input[data-t="z"]').forEach((inp) => {
     inp.addEventListener("focus", () => showNPBarFor(inp));
     inp.addEventListener("blur", hideNPBarIfNeeded);
   });
 
-  // roem focus => roemBar + notify on blur
   document.querySelectorAll('input[data-t="rw"], input[data-t="rz"]').forEach((inp) => {
     inp.addEventListener("focus", () => showRoemBarFor(inp));
     inp.addEventListener("blur", () => {
@@ -1184,7 +1174,6 @@ ${escapeHTML(entry.winnerText)}
     });
   });
 
-  // names
   [w1, w2, z1, z2].forEach((inp) =>
     inp.addEventListener("input", () => {
       updateNames();

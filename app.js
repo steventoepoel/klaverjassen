@@ -4,10 +4,10 @@
   const TOTAL = 162;
   const ROUNDS = 16;
 
-  const APP_VERSION = "20260219"; // voor cache-busting & UI gedrag
+  const APP_VERSION = "20260219-2";
 
-  const GAME_KEY = "rene_telraam_game_v15";
-  const HIST_KEY = "rene_telraam_history_v5";
+  const GAME_KEY = "rene_telraam_game_v16";
+  const HIST_KEY = "rene_telraam_history_v6";
 
   const $ = (id) => document.getElementById(id);
 
@@ -26,9 +26,7 @@
     (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
     window.navigator.standalone === true;
 
-  const hapticError = () => {
-    try { navigator.vibrate?.(80); } catch {}
-  };
+  const hapticError = () => { try { navigator.vibrate?.(80); } catch {} };
 
   const normalizeSpecial = (v) => {
     v = String(v ?? "").trim();
@@ -90,6 +88,12 @@
   const npPit = $("npPit");
   const npClear = $("npClear");
 
+  const roemBar = $("roemBar");
+  const roemHint = $("roemHint");
+  const roem20 = $("roem20");
+  const roem50 = $("roem50");
+  const roemClear = $("roemClear");
+
   const pdfOverlay = $("pdfOverlay");
   const pdfBack = $("pdfBack");
   const pdfPrint = $("pdfPrint");
@@ -106,8 +110,9 @@
   let gameEndedAt = null;
 
   let focusedPointsInput = null;
+  let focusedRoemInput = null;
 
-  /* ---------- install button (PWA) ---------- */
+  /* ---------- install button ---------- */
   let deferredPrompt = null;
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
@@ -117,24 +122,21 @@
   installBtn?.addEventListener("click", () => deferredPrompt?.prompt());
   if (isStandaloneMode() && installBtn) installBtn.style.display = "none";
 
-  /* ---------- Service Worker: offline + update ---------- */
+  /* ---------- Service Worker ---------- */
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", async () => {
       try {
         const reg = await navigator.serviceWorker.register(`./service-worker.js?v=${APP_VERSION}`);
-        // Als er een nieuwe SW klaarstaat, forceer refresh prompt
         reg.addEventListener("updatefound", () => {
           const nw = reg.installing;
           if (!nw) return;
           nw.addEventListener("statechange", () => {
             if (nw.state === "installed" && navigator.serviceWorker.controller) {
-              // Nieuwe versie beschikbaar
               showToast("Nieuwe versie klaar ✅ Herlaad om te updaten.");
             }
           });
         });
       } catch (e) {
-        // niet fatal
         console.log("SW register failed", e);
       }
     });
@@ -179,14 +181,14 @@
     q("z", r).classList.add("inputError");
   };
 
-  /* ---------- Roem validation ---------- */
+  /* ---------- Roem parsing/validation (tientallen) ---------- */
   function parseRoem(raw){
     const s = String(raw ?? "").trim();
     if (!s) return { ok:true, value:0 };
     if (!isNumericLike(s)) return { ok:false, value:0 };
     const n = parseInt(s, 10);
     if (n < 0) return { ok:false, value:0 };
-    if (n % 10 !== 0) return { ok:false, value:0 }; // alleen tientallen
+    if (n % 10 !== 0) return { ok:false, value:0 };
     return { ok:true, value:n };
   }
 
@@ -209,7 +211,6 @@
     const had = (ptsEl.dataset.pbonus === "1");
 
     if (apply && !had) {
-      // +100 is ook een tiental -> ok
       const cur = parseInt(roemEl.value, 10) || 0;
       roemEl.value = String(cur + 100);
       ptsEl.dataset.pbonus = "1";
@@ -225,17 +226,13 @@
   const validateNoEqualRound = (r) => {
     const wPts = pointsValueFromDisplay(q("w", r).value);
     const zPts = pointsValueFromDisplay(q("z", r).value);
-
     if (wPts === null || zPts === null) { clearRoundError(r); return true; }
 
     if (wPts === 81 && zPts === 81) {
-      // roem gelijk of allebei 0 = niet toegestaan (jouw regel)
       const rw = parseRoem(q("rw", r).value);
       const rz = parseRoem(q("rz", r).value);
-
       const rwVal = rw.ok ? rw.value : 0;
       const rzVal = rz.ok ? rz.value : 0;
-
       if (rwVal === rzVal) {
         setRoundError(r);
         showToast("Wakker worden! Je kunt niet evenveel punten krijgen in een ronde. 😊");
@@ -247,32 +244,16 @@
     return true;
   };
 
-  /* ---------- Build table rows (with roem +20/+50 buttons) ---------- */
+  /* ---------- Build table rows (no buttons inside cells) ---------- */
   rows.innerHTML = "";
   for (let r = 1; r <= ROUNDS; r++) {
     const tr = document.createElement("tr");
     tr.innerHTML =
       `<td>${r}</td>` +
       `<td><input class="inp-wij" data-t="w" data-r="${r}" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="characters" spellcheck="false"></td>` +
-      `<td>
-        <div class="roemCell">
-          <input class="inp-wijroem" data-t="rw" data-r="${r}" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" spellcheck="false">
-          <div class="roemBtns">
-            <button type="button" data-roembtn="20" data-team="rw" data-r="${r}">+20</button>
-            <button type="button" data-roembtn="50" data-team="rw" data-r="${r}">+50</button>
-          </div>
-        </div>
-      </td>` +
+      `<td><input class="inp-wijroem" data-t="rw" data-r="${r}" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" spellcheck="false"></td>` +
       `<td><input class="inp-zij" data-t="z" data-r="${r}" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="characters" spellcheck="false"></td>` +
-      `<td>
-        <div class="roemCell">
-          <input class="inp-zijroem" data-t="rz" data-r="${r}" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" spellcheck="false">
-          <div class="roemBtns">
-            <button type="button" data-roembtn="20" data-team="rz" data-r="${r}">+20</button>
-            <button type="button" data-roembtn="50" data-team="rz" data-r="${r}">+50</button>
-          </div>
-        </div>
-      </td>`;
+      `<td><input class="inp-zijroem" data-t="rz" data-r="${r}" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" spellcheck="false"></td>`;
     rows.appendChild(tr);
 
     if (r % 4 === 0 && r < ROUNDS) {
@@ -283,7 +264,7 @@
     }
   }
 
-  /* ---------- prevent iOS enter zoom behavior: Enter => blur ---------- */
+  /* ---------- Enter => blur ---------- */
   document.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && e.target instanceof HTMLInputElement) {
       e.preventDefault();
@@ -291,29 +272,47 @@
     }
   });
 
-  /* ---------- Nat/Pit bar above keyboard ---------- */
-  const adjustNPBarForKeyboard = () => {
-    if (!window.visualViewport) return;
+  /* ---------- Bars above keyboard (npBar + roemBar) ---------- */
+  const keyboardHeight = () => {
+    if (!window.visualViewport) return 0;
     const vv = window.visualViewport;
-    const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    npBar.style.bottom = `${10 + keyboardHeight}px`;
+    return Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  };
+
+  const adjustBars = () => {
+    const kh = keyboardHeight();
+
+    // npBar always lowest of the two
+    if (npBar.style.display === "block") {
+      npBar.style.bottom = `${10 + kh}px`;
+    } else {
+      npBar.style.bottom = "10px";
+    }
+
+    // roemBar above npBar if both visible
+    const npOffset = (npBar.style.display === "block") ? 74 : 0;
+    if (roemBar.style.display === "block") {
+      roemBar.style.bottom = `${10 + kh + npOffset}px`;
+    } else {
+      roemBar.style.bottom = "10px";
+    }
   };
 
   if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", adjustNPBarForKeyboard);
-    window.visualViewport.addEventListener("scroll", adjustNPBarForKeyboard);
+    window.visualViewport.addEventListener("resize", adjustBars);
+    window.visualViewport.addEventListener("scroll", adjustBars);
   }
-  window.addEventListener("resize", adjustNPBarForKeyboard);
+  window.addEventListener("resize", adjustBars);
 
+  // Nat/Pit bar show/hide
   const showNPBarFor = (inp) => {
     focusedPointsInput = inp;
     npBar.style.display = "block";
     const r = inp.dataset.r;
     const side = inp.dataset.t === "w" ? "Wij" : "Zij";
     npHint.textContent = `Ronde ${r} • ${side} punten`;
-    adjustNPBarForKeyboard();
+    adjustBars();
   };
-
   const hideNPBarIfNeeded = () => {
     setTimeout(() => {
       const a = document.activeElement;
@@ -321,22 +320,57 @@
       if (!isPoints) {
         focusedPointsInput = null;
         npBar.style.display = "none";
-        npBar.style.bottom = "10px";
         npHint.textContent = "Selecteer een puntenvakje…";
+        adjustBars();
       }
     }, 120);
   };
-
   const applyNP = (value) => {
     if (!focusedPointsInput) return;
     focusedPointsInput.value = value;
     focusedPointsInput.dispatchEvent(new Event("input", { bubbles: true }));
     focusedPointsInput.focus();
   };
-
   npNat.addEventListener("click", () => applyNP("N"));
   npPit.addEventListener("click", () => applyNP("P"));
   npClear.addEventListener("click", () => applyNP(""));
+
+  // Roem bar show/hide
+  const showRoemBarFor = (inp) => {
+    focusedRoemInput = inp;
+    roemBar.style.display = "block";
+    roemHint.textContent = `Ronde ${inp.dataset.r} • ${inp.dataset.t === "rw" ? "Wij roem" : "Zij roem"}`;
+    adjustBars();
+  };
+  const hideRoemBarIfNeeded = () => {
+    setTimeout(() => {
+      const a = document.activeElement;
+      const isRoem = a && a.dataset && (a.dataset.t === "rw" || a.dataset.t === "rz");
+      if (!isRoem) {
+        focusedRoemInput = null;
+        roemBar.style.display = "none";
+        roemHint.textContent = "Selecteer een roemvakje…";
+        adjustBars();
+      }
+    }, 120);
+  };
+  const applyRoemDelta = (delta) => {
+    if (!focusedRoemInput) return;
+    const curParsed = parseRoem(focusedRoemInput.value);
+    const cur = curParsed.ok ? curParsed.value : 0;
+    focusedRoemInput.value = String(cur + delta);
+    validateRoemField(focusedRoemInput);
+    focusedRoemInput.dispatchEvent(new Event("input", { bubbles: true }));
+    focusedRoemInput.focus();
+  };
+  roem20.addEventListener("click", () => applyRoemDelta(20));
+  roem50.addEventListener("click", () => applyRoemDelta(50));
+  roemClear.addEventListener("click", () => {
+    if (!focusedRoemInput) return;
+    focusedRoemInput.value = "";
+    focusedRoemInput.dispatchEvent(new Event("input", { bubbles: true }));
+    focusedRoemInput.focus();
+  });
 
   /* ---------- Confetti ---------- */
   const confetti = () => {
@@ -375,7 +409,8 @@
     }
   };
 
-  /* ---------- recompute totals (invalid roem NOT counted) ---------- */
+  /* ---------- recompute totals
+     N-regel: roem van het Nat-team gaat naar het andere team (mits roem geldig) ---------- */
   const recompute = () => {
     let pw = 0, pz = 0;
     let rwSum = 0, rzSum = 0;
@@ -386,47 +421,70 @@
     let natW = 0, natZ = 0, pitW = 0, pitZ = 0;
 
     for (let r = 1; r <= ROUNDS; r++) {
-      // 81-81 rule
-      if (!validateNoEqualRound(r)) anyInvalid = true;
+      const wRaw = (q("w", r).value || "").trim();
+      const zRaw = (q("z", r).value || "").trim();
+      const wNorm = normalizeSpecial(wRaw);
+      const zNorm = normalizeSpecial(zRaw);
 
-      const wDisp = (q("w", r).value || "").trim();
-      const zDisp = (q("z", r).value || "").trim();
+      const wIsN = (wNorm === "N");
+      const zIsN = (zNorm === "N");
+      const wIsP = (wNorm === "P");
+      const zIsP = (zNorm === "P");
 
-      const wNorm = normalizeSpecial(wDisp);
-      const zNorm = normalizeSpecial(zDisp);
+      if (wIsN) natW++;
+      if (zIsN) natZ++;
+      if (wIsP) pitW++;
+      if (zIsP) pitZ++;
 
-      if (wNorm === "N") natW++;
-      if (zNorm === "N") natZ++;
-      if (wNorm === "P") pitW++;
-      if (zNorm === "P") pitZ++;
-
-      const wPts = pointsValueFromDisplay(wDisp);
-      const zPts = pointsValueFromDisplay(zDisp);
+      // punten
+      const wPts = pointsValueFromDisplay(wRaw);
+      const zPts = pointsValueFromDisplay(zRaw);
 
       if (wPts === null || zPts === null) filled = false;
+
+      // beide N tegelijk -> invalid (onlogisch)
+      if (wIsN && zIsN) {
+        anyInvalid = true;
+        q("w", r).classList.add("inputError");
+        q("z", r).classList.add("inputError");
+      }
 
       pw += (wPts ?? 0);
       pz += (zPts ?? 0);
 
-      // roem (alleen meetellen als valid tiental)
+      // roem validatie
       const rw = parseRoem(q("rw", r).value);
       const rz = parseRoem(q("rz", r).value);
 
-      if (rw.ok) {
-        q("rw", r).classList.remove("inputError");
-        rwSum += rw.value;
+      if (!rw.ok) { q("rw", r).classList.add("inputError"); anyInvalid = true; }
+      else { q("rw", r).classList.remove("inputError"); }
+
+      if (!rz.ok) { q("rz", r).classList.add("inputError"); anyInvalid = true; }
+      else { q("rz", r).classList.remove("inputError"); }
+
+      // N-transfer:
+      // - Als Wij N is: Wij-roem van die ronde gaat naar Zij
+      // - Als Zij N is: Zij-roem van die ronde gaat naar Wij
+      // - Anders: roem blijft bij eigen team
+      const rwVal = rw.ok ? rw.value : 0;
+      const rzVal = rz.ok ? rz.value : 0;
+
+      if (wIsN && !zIsN) {
+        // Wij nat: roemWij -> Zij
+        rzSum += rwVal;
+        rzSum += rzVal;
+      } else if (zIsN && !wIsN) {
+        // Zij nat: roemZij -> Wij
+        rwSum += rzVal;
+        rwSum += rwVal;
       } else {
-        q("rw", r).classList.add("inputError");
-        anyInvalid = true; // invalid roem blokkeert winnaar
+        // normaal
+        rwSum += rwVal;
+        rzSum += rzVal;
       }
 
-      if (rz.ok) {
-        q("rz", r).classList.remove("inputError");
-        rzSum += rz.value;
-      } else {
-        q("rz", r).classList.add("inputError");
-        anyInvalid = true;
-      }
+      // 81-81 rule (telt ook mee als invalid)
+      if (!validateNoEqualRound(r)) anyInvalid = true;
     }
 
     const totW = pw + rwSum;
@@ -522,7 +580,7 @@
         w: q("w", r).value,
         rw: q("rw", r).value,
         z: q("z", r).value,
-        rz: q("rz", r).value,
+        rz: q("rz", r).value
       });
     }
 
@@ -567,14 +625,7 @@
     const addTeam = (team, points, roem, nat, pit) => {
       const key = team || "Onbekend";
       if (!teamStats.has(key)) {
-        teamStats.set(key, {
-          team: key,
-          bestPoints: -Infinity,
-          worstPoints: Infinity,
-          bestRoem: -Infinity,
-          natTotal: 0,
-          pitTotal: 0
-        });
+        teamStats.set(key, { team:key, bestPoints:-Infinity, worstPoints:Infinity, bestRoem:-Infinity, natTotal:0, pitTotal:0 });
       }
       const s = teamStats.get(key);
       s.bestPoints = Math.max(s.bestPoints, points);
@@ -742,108 +793,7 @@ ${escapeHTML(entry.winnerText)}
     renderHighscores(hist);
   };
 
-  /* ---------- new game ---------- */
-  const isGameCompleteAndValid = () => {
-    for (let r = 1; r <= ROUNDS; r++) {
-      const wPts = pointsValueFromDisplay(q("w", r).value);
-      const zPts = pointsValueFromDisplay(q("z", r).value);
-      if (wPts === null || zPts === null) return false;
-      if (!validateNoEqualRound(r)) return false;
-
-      // roem must be valid
-      if (!parseRoem(q("rw", r).value).ok) return false;
-      if (!parseRoem(q("rz", r).value).ok) return false;
-    }
-    return true;
-  };
-
-  const newGame = () => {
-    if (winnerEl.textContent && gameStartedAt && gameEndedAt && isGameCompleteAndValid()) {
-      const entry = buildHistoryEntry();
-      const hist = loadHistory();
-      hist.unshift(entry);
-      saveHistory(hist);
-    }
-    localStorage.removeItem(GAME_KEY);
-    location.reload();
-  };
-
-  /* ---------- core input logic ---------- */
-  const onScoreInput = (e) => {
-    if (suppress) return;
-
-    if (!gameStartedAt) { gameStartedAt = nowISO(); gameEndedAt = null; }
-
-    const el = e.target;
-    const t = el.dataset.t;
-    const r = parseInt(el.dataset.r, 10);
-
-    // Roem: validate tiental, block counting if invalid (recompute handles it)
-    if (t === "rw" || t === "rz") {
-      validateRoemField(el);
-      validateNoEqualRound(r);
-      recompute();
-      saveGame();
-      return;
-    }
-
-    if (t !== "w" && t !== "z") return;
-
-    const prevNorm = el.dataset.prevNorm || "";
-    const valNorm = normalizeSpecial(el.value);
-
-    const otherT = (t === "w") ? "z" : "w";
-    const otherEl = q(otherT, r);
-
-    suppress = true;
-
-    if (valNorm === "") {
-      otherEl.value = "";
-    } else if (valNorm === "N" || valNorm === "P") {
-      el.value = valNorm;            // letter zichtbaar
-      otherEl.value = String(TOTAL); // ander 162
-    } else if (isNumericLike(valNorm)) {
-      const num = clampInt(parseInt(valNorm, 10), 0, TOTAL);
-      el.value = String(num);
-      otherEl.value = String(TOTAL - num);
-    } else {
-      el.value = "";
-      otherEl.value = "";
-    }
-
-    // Pit bonus roem (+100)
-    if (prevNorm === "P" && valNorm !== "P") setPitBonus(t, r, false);
-    if (prevNorm !== "P" && valNorm === "P") setPitBonus(t, r, true);
-
-    el.dataset.prevNorm = valNorm;
-
-    suppress = false;
-
-    validateNoEqualRound(r);
-    recompute();
-    saveGame();
-  };
-
-  /* ---------- roem +20/+50 buttons ---------- */
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-roembtn]");
-    if (!btn) return;
-
-    const add = parseInt(btn.dataset.roembtn, 10);
-    const team = btn.dataset.team; // rw or rz
-    const r = parseInt(btn.dataset.r, 10);
-    const inp = q(team, r);
-
-    const curParsed = parseRoem(inp.value);
-    const cur = (curParsed.ok ? curParsed.value : 0);
-
-    inp.value = String(cur + add);
-    validateRoemField(inp);
-    inp.dispatchEvent(new Event("input", { bubbles: true }));
-    inp.focus();
-  });
-
-  /* ---------- export/import historie ---------- */
+  /* ---------- export/import ---------- */
   exportBtn.addEventListener("click", () => {
     const hist = loadHistory();
     const blob = new Blob([JSON.stringify(hist, null, 2)], { type: "application/json" });
@@ -868,10 +818,8 @@ ${escapeHTML(entry.winnerText)}
     try {
       const txt = await file.text();
       const incoming = JSON.parse(txt);
+      if (!Array.isArray(incoming)) throw new Error("bad format");
 
-      if (!Array.isArray(incoming)) throw new Error("Niet het juiste formaat");
-
-      // simpele merge op id
       const current = loadHistory();
       const byId = new Map(current.map(x => [x.id, x]));
       for (const entry of incoming) {
@@ -890,16 +838,104 @@ ${escapeHTML(entry.winnerText)}
     }
   });
 
-  /* ---------- PDF overlay close by back button ---------- */
-  // already wired in openPdfOverlay
+  /* ---------- new game ---------- */
+  const isGameCompleteAndValid = () => {
+    for (let r = 1; r <= ROUNDS; r++) {
+      const wPts = pointsValueFromDisplay(q("w", r).value);
+      const zPts = pointsValueFromDisplay(q("z", r).value);
+      if (wPts === null || zPts === null) return false;
+      if (!validateNoEqualRound(r)) return false;
+      if (!parseRoem(q("rw", r).value).ok) return false;
+      if (!parseRoem(q("rz", r).value).ok) return false;
+
+      const wN = normalizeSpecial(q("w", r).value) === "N";
+      const zN = normalizeSpecial(q("z", r).value) === "N";
+      if (wN && zN) return false;
+    }
+    return true;
+  };
+
+  const newGame = () => {
+    if (winnerEl.textContent && gameStartedAt && gameEndedAt && isGameCompleteAndValid()) {
+      const entry = buildHistoryEntry();
+      const hist = loadHistory();
+      hist.unshift(entry);
+      saveHistory(hist);
+    }
+    localStorage.removeItem(GAME_KEY);
+    location.reload();
+  };
+
+  /* ---------- input logic ---------- */
+  const onScoreInput = (e) => {
+    if (suppress) return;
+
+    if (!gameStartedAt) { gameStartedAt = nowISO(); gameEndedAt = null; }
+
+    const el = e.target;
+    const t = el.dataset.t;
+    const r = parseInt(el.dataset.r, 10);
+
+    // roem
+    if (t === "rw" || t === "rz") {
+      validateRoemField(el);
+      validateNoEqualRound(r);
+      recompute();
+      saveGame();
+      return;
+    }
+
+    // points
+    if (t !== "w" && t !== "z") return;
+
+    const prevNorm = el.dataset.prevNorm || "";
+    const valNorm = normalizeSpecial(el.value);
+
+    const otherT = (t === "w") ? "z" : "w";
+    const otherEl = q(otherT, r);
+
+    suppress = true;
+
+    if (valNorm === "") {
+      otherEl.value = "";
+    } else if (valNorm === "N" || valNorm === "P") {
+      el.value = valNorm;
+      otherEl.value = String(TOTAL);
+    } else if (isNumericLike(valNorm)) {
+      const num = clampInt(parseInt(valNorm, 10), 0, TOTAL);
+      el.value = String(num);
+      otherEl.value = String(TOTAL - num);
+    } else {
+      el.value = "";
+      otherEl.value = "";
+    }
+
+    // Pit roem +100
+    if (prevNorm === "P" && valNorm !== "P") setPitBonus(t, r, false);
+    if (prevNorm !== "P" && valNorm === "P") setPitBonus(t, r, true);
+
+    el.dataset.prevNorm = valNorm;
+
+    suppress = false;
+
+    validateNoEqualRound(r);
+    recompute();
+    saveGame();
+  };
 
   /* ---------- Hook events ---------- */
   document.querySelectorAll('input[data-t]').forEach(inp => inp.addEventListener("input", onScoreInput));
 
-  // focus handling for Nat/Pit
+  // focus for points => npBar
   document.querySelectorAll('input[data-t="w"], input[data-t="z"]').forEach(inp => {
     inp.addEventListener("focus", () => showNPBarFor(inp));
     inp.addEventListener("blur", hideNPBarIfNeeded);
+  });
+
+  // focus for roem => roemBar
+  document.querySelectorAll('input[data-t="rw"], input[data-t="rz"]').forEach(inp => {
+    inp.addEventListener("focus", () => showRoemBarFor(inp));
+    inp.addEventListener("blur", hideRoemBarIfNeeded);
   });
 
   // name changes
@@ -913,6 +949,7 @@ ${escapeHTML(entry.winnerText)}
   /* ---------- Boot ---------- */
   loadGame();
   updateNames();
+  adjustBars();
   recompute();
   renderHistory();
 })();

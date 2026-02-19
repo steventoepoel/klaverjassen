@@ -50,9 +50,8 @@
   const isNumericLike = (s) => s !== "" && s != null && !isNaN(String(s).trim());
   const clampInt = (n, min, max) => Math.max(min, Math.min(max, n));
 
-  // ✅ AANGEPAST:
-  // - N (Nat): team 0 punten
-  // - P (Pit): team 162 punten
+  // N (Nat): team 0 punten
+  // P (Pit): team 162 punten
   const pointsValueFromDisplay = (raw) => {
     const v = normalizeSpecial(raw);
     if (v === "N") return 0;
@@ -118,12 +117,9 @@
 
   const pdfOverlay = $("pdfOverlay");
   const pdfBack = $("pdfBack");
-  const pdfPrint = $("pdfPrint");
+  const pdfPrint = $("pdfPrint"); // ✅ hergebruikt als WhatsApp deel-knop
   const pdfFrame = $("pdfFrame");
   const pdfTitle = $("pdfTitle");
-
-  const confettiCanvas = $("confetti");
-  const confettiCtx = confettiCanvas.getContext("2d");
 
   /* ---------- state ---------- */
   let suppress = false;
@@ -623,37 +619,7 @@
     }
   };
 
-  /* ---------- Confetti + winner ---------- */
-  const confetti = () => {
-    confettiCanvas.width = innerWidth;
-    confettiCanvas.height = innerHeight;
-
-    const w = confettiCanvas.width;
-    const h = confettiCanvas.height;
-
-    const parts = Array.from({ length: 220 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      r: Math.random() * 6 + 2,
-      vy: Math.random() * 2 + 2,
-      hue: Math.random() * 360,
-    }));
-
-    const timer = setInterval(() => {
-      confettiCtx.clearRect(0, 0, w, h);
-      for (const o of parts) {
-        confettiCtx.beginPath();
-        confettiCtx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
-        confettiCtx.fillStyle = `hsl(${o.hue},100%,50%)`;
-        confettiCtx.fill();
-        o.y += o.vy;
-        if (o.y > h) o.y = 0;
-      }
-    }, 30);
-
-    setTimeout(() => clearInterval(timer), 2600);
-  };
-
+  /* ---------- winner ---------- */
   const showWinnerOnce = (tw, tz) => {
     if (tw === tz) {
       const key = `TIE|${tw}|${tz}`;
@@ -665,10 +631,7 @@
     const name = tw > tz ? teamWijNaam() : teamZijNaam();
     const key = `${tw}|${tz}|${name}`;
     winnerEl.textContent = `🏆 Winnaar: ${name} 🏆`;
-    if (lastWinnerKey !== key) {
-      lastWinnerKey = key;
-      confetti();
-    }
+    lastWinnerKey = key;
   };
 
   /* ---------- persistence ---------- */
@@ -839,8 +802,14 @@
     const mostNat = top((a, b) => b.natTotal - a.natTotal);
     const mostPit = top((a, b) => b.pitTotal - a.pitTotal);
 
-    card("Hoogste punten (zonder roem)", `<b>${escapeHTML(bestPoints.team)}</b><br>${bestPoints.bestPoints} punten`);
-    card("Laagste punten (zonder roem)", `<b>${escapeHTML(worstPoints.team)}</b><br>${worstPoints.worstPoints} punten`);
+    card(
+      "Hoogste punten (zonder roem)",
+      `<b>${escapeHTML(bestPoints.team)}</b><br>${bestPoints.bestPoints} punten`
+    );
+    card(
+      "Laagste punten (zonder roem)",
+      `<b>${escapeHTML(worstPoints.team)}</b><br>${worstPoints.worstPoints} punten`
+    );
     card("Meeste roem", `<b>${escapeHTML(bestRoem.team)}</b><br>${bestRoem.bestRoem} roem`);
     card("Meeste Nat", `<b>${escapeHTML(mostNat.team)}</b><br>${mostNat.natTotal}× Nat`);
     card("Meeste Pit", `<b>${escapeHTML(mostPit.team)}</b><br>${mostPit.pitTotal}× Pit`);
@@ -888,36 +857,54 @@ ${escapeHTML(entry.winnerText)}
 </body></html>`;
   };
 
-  const openPdfOverlay = (html, title) => {
+  const buildWhatsAppTextForEntry = (entry) => {
+    const intro = "Hierbij de puntentelling van een memorabele pot!";
+
+    const lines = [
+      intro,
+      "",
+      `${entry.wijTeam} - ${entry.zijTeam}`,
+      `Start: ${fmtDateTime(entry.startedAt)}`,
+      `Eind: ${fmtDateTime(entry.endedAt)}`,
+      "",
+      `Punten: ${entry.pointsWij} - ${entry.pointsZij}`,
+      `Roem: ${entry.roemWij} - ${entry.roemZij}`,
+      `Totaal: ${entry.totalWij} - ${entry.totalZij}`,
+      `Nat: ${entry.natWij} - ${entry.natZij} | Pit: ${entry.pitWij} - ${entry.pitZij}`,
+      "",
+      entry.winnerText,
+    ];
+
+    return lines.join("\n");
+  };
+
+  const shareToWhatsApp = (text) => {
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  };
+
+  const openPdfOverlay = (html, title, shareText) => {
     pdfTitle.textContent = title || "PDF";
     pdfFrame.srcdoc = html;
     pdfOverlay.style.display = "block";
 
-    pdfPrint.onclick = () => {
-      try {
-        pdfFrame.contentWindow.focus();
-        pdfFrame.contentWindow.print();
-      } catch {}
-    };
+    // ✅ Geen print knop meer; deze knop wordt WhatsApp delen
+    if (pdfPrint) {
+      pdfPrint.textContent = "💬 WhatsApp";
+      pdfPrint.onclick = () => shareToWhatsApp(shareText || "Hierbij de puntentelling van een memorabele pot!");
+    }
+
     pdfBack.onclick = () => {
       pdfOverlay.style.display = "none";
       pdfFrame.srcdoc = "";
     };
   };
 
-  const printGameAsPDF = (entry) => {
+  // ✅ We openen altijd de overlay (geen print flow meer)
+  const openGameAsPDF = (entry) => {
     const html = pdfHTMLForEntry(entry);
-    if (isStandaloneMode()) return openPdfOverlay(html, `${entry.wijTeam} - ${entry.zijTeam}`);
-
-    const w = window.open("", "_blank");
-    if (!w) return openPdfOverlay(html, `${entry.wijTeam} - ${entry.zijTeam}`);
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    try {
-      w.print();
-    } catch {}
+    const shareText = buildWhatsAppTextForEntry(entry);
+    openPdfOverlay(html, `${entry.wijTeam} - ${entry.zijTeam}`, shareText);
   };
 
   const renderHistory = () => {
@@ -952,7 +939,7 @@ ${escapeHTML(entry.winnerText)}
 
       const pdfBtn = document.createElement("button");
       pdfBtn.textContent = "📄 PDF";
-      pdfBtn.onclick = () => printGameAsPDF(entry);
+      pdfBtn.onclick = () => openGameAsPDF(entry);
 
       const delBtn = document.createElement("button");
       delBtn.textContent = "🗑️ Verwijder";
@@ -1038,6 +1025,7 @@ ${escapeHTML(entry.winnerText)}
     return true;
   };
 
+  // nieuw potje zonder page reload
   const resetGameInPlace = () => {
     suppress = true;
 
@@ -1111,6 +1099,7 @@ ${escapeHTML(entry.winnerText)}
       return;
     }
 
+    // points inputs
     if (t !== "w" && t !== "z") return;
 
     const prevNorm = el.dataset.prevNorm || "";
@@ -1128,7 +1117,7 @@ ${escapeHTML(entry.winnerText)}
       el.value = "N";
       otherEl.value = String(TOTAL);
     } else if (valNorm === "P") {
-      // ✅ Pit: P blijft staan, team = 162, tegenstander = 0
+      // Pit: P blijft staan, team = 162, tegenstander = 0
       el.value = "P";
       otherEl.value = "0";
     } else if (isNumericLike(valNorm)) {
@@ -1140,11 +1129,11 @@ ${escapeHTML(entry.winnerText)}
       otherEl.value = "";
     }
 
-    // Pit bonus (+100 roem) on points input blijft gelden
+    // Pit bonus (+100 roem) blijft gelden
     if (prevNorm === "P" && valNorm !== "P") setPitBonus(t, r, false);
     if (prevNorm !== "P" && valNorm === "P") setPitBonus(t, r, true);
 
-    // Nat roem transfer (alleen bij N)
+    // Nat roem transfer (alleen bij N; en alleen als roemThis geldig is)
     applyNatRoemTransferVisual(t, r, prevNorm, valNorm);
 
     el.dataset.prevNorm = valNorm;
@@ -1161,11 +1150,13 @@ ${escapeHTML(entry.winnerText)}
     inp.addEventListener("input", onScoreInput)
   );
 
+  // points focus => npBar
   document.querySelectorAll('input[data-t="w"], input[data-t="z"]').forEach((inp) => {
     inp.addEventListener("focus", () => showNPBarFor(inp));
     inp.addEventListener("blur", hideNPBarIfNeeded);
   });
 
+  // roem focus => roemBar + notify on blur
   document.querySelectorAll('input[data-t="rw"], input[data-t="rz"]').forEach((inp) => {
     inp.addEventListener("focus", () => showRoemBarFor(inp));
     inp.addEventListener("blur", () => {
@@ -1174,6 +1165,7 @@ ${escapeHTML(entry.winnerText)}
     });
   });
 
+  // names
   [w1, w2, z1, z2].forEach((inp) =>
     inp.addEventListener("input", () => {
       updateNames();

@@ -1,11 +1,11 @@
-const VERSION = "2026-02-19-2";
+const VERSION = "2026-02-19-3";
 const CACHE = `rene-telraam-${VERSION}`;
 
 const ASSETS = [
   "./",
   "./index.html",
-  "./app.js?v=20260219-2",
-  "./manifest.json?v=20260219-2",
+  "./app.js?v=20260219-3",
+  "./manifest.json?v=20260219-3",
   "./logo.png",
   "./icon-512.png"
 ];

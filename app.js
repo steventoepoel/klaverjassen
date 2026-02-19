@@ -18,6 +18,11 @@
       d.getHours()
     )}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
   };
+  const fmtDate = (iso) => {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  };
 
   const escapeHTML = (s) =>
     String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -117,7 +122,7 @@
 
   const pdfOverlay = $("pdfOverlay");
   const pdfBack = $("pdfBack");
-  const pdfPrint = $("pdfPrint"); // ✅ hergebruikt als WhatsApp deel-knop
+  const pdfShareBtn = $("pdfPrint"); // hergebruikt als WhatsApp-knop (in HTML heet die nog pdfPrint)
   const pdfFrame = $("pdfFrame");
   const pdfTitle = $("pdfTitle");
 
@@ -291,8 +296,31 @@
   installBtn?.addEventListener("click", () => deferredPrompt?.prompt());
   if (isStandaloneMode() && installBtn) installBtn.style.display = "none";
 
-  /* ---------- Herlaad-knop (helemaal onderaan) ---------- */
+  /* ---------- Herlaad-knop (update klaar) onderaan ---------- */
   let reloadBar = null;
+
+  const keyboardHeight = () => {
+    if (!window.visualViewport) return 0;
+    const vv = window.visualViewport;
+    return Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  };
+
+  const adjustBars = () => {
+    const kh = keyboardHeight();
+
+    if (npBar.style.display === "block") npBar.style.bottom = `${10 + kh}px`;
+    else npBar.style.bottom = "10px";
+
+    const npOffset = npBar.style.display === "block" ? 74 : 0;
+    if (roemBar.style.display === "block")
+      roemBar.style.bottom = `${10 + kh + npOffset}px`;
+    else roemBar.style.bottom = "10px";
+
+    if (reloadBar && reloadBar.style.display === "block") {
+      reloadBar.style.bottom = `${10 + kh}px`;
+    }
+  };
+
   const ensureReloadBar = () => {
     if (reloadBar) return reloadBar;
 
@@ -328,6 +356,12 @@
     adjustBars();
   };
 
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", adjustBars);
+    window.visualViewport.addEventListener("scroll", adjustBars);
+  }
+  window.addEventListener("resize", adjustBars);
+
   /* ---------- Service Worker ---------- */
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", async () => {
@@ -350,35 +384,6 @@
       }
     });
   }
-
-  /* ---------- Bars above keyboard ---------- */
-  const keyboardHeight = () => {
-    if (!window.visualViewport) return 0;
-    const vv = window.visualViewport;
-    return Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-  };
-
-  const adjustBars = () => {
-    const kh = keyboardHeight();
-
-    if (npBar.style.display === "block") npBar.style.bottom = `${10 + kh}px`;
-    else npBar.style.bottom = "10px";
-
-    const npOffset = npBar.style.display === "block" ? 74 : 0;
-    if (roemBar.style.display === "block")
-      roemBar.style.bottom = `${10 + kh + npOffset}px`;
-    else roemBar.style.bottom = "10px";
-
-    if (reloadBar && reloadBar.style.display === "block") {
-      reloadBar.style.bottom = `${10 + kh}px`;
-    }
-  };
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", adjustBars);
-    window.visualViewport.addEventListener("scroll", adjustBars);
-  }
-  window.addEventListener("resize", adjustBars);
 
   /* ---------- Nat/Pit bar ---------- */
   const showNPBarFor = (inp) => {
@@ -747,74 +752,7 @@
     };
   };
 
-  const renderHighscores = (hist) => {
-    highscoresEl.innerHTML = "";
-
-    const card = (title, html) => {
-      const d = document.createElement("div");
-      d.className = "badge";
-      d.innerHTML = `<div style="font-weight:900; margin-bottom:6px;">${escapeHTML(
-        title
-      )}</div><div>${html}</div>`;
-      highscoresEl.appendChild(d);
-    };
-
-    if (!hist.length) {
-      card(
-        "Nog geen highscores",
-        "Speel een potje en druk daarna op <b>Nieuw potje</b> om het op te slaan."
-      );
-      return;
-    }
-
-    const teamStats = new Map();
-    const addTeam = (team, points, roem, nat, pit) => {
-      const key = team || "Onbekend";
-      if (!teamStats.has(key)) {
-        teamStats.set(key, {
-          team: key,
-          bestPoints: -Infinity,
-          worstPoints: Infinity,
-          bestRoem: -Infinity,
-          natTotal: 0,
-          pitTotal: 0,
-        });
-      }
-      const s = teamStats.get(key);
-      s.bestPoints = Math.max(s.bestPoints, points);
-      s.worstPoints = Math.min(s.worstPoints, points);
-      s.bestRoem = Math.max(s.bestRoem, roem);
-      s.natTotal += nat;
-      s.pitTotal += pit;
-    };
-
-    for (const g of hist) {
-      addTeam(g.wijTeam, g.pointsWij, g.roemWij, g.natWij, g.pitWij);
-      addTeam(g.zijTeam, g.pointsZij, g.roemZij, g.natZij, g.pitZij);
-    }
-
-    const arr = Array.from(teamStats.values());
-    const top = (cmp) => arr.slice().sort(cmp)[0];
-
-    const bestPoints = top((a, b) => b.bestPoints - a.bestPoints);
-    const worstPoints = top((a, b) => a.worstPoints - b.worstPoints);
-    const bestRoem = top((a, b) => b.bestRoem - a.bestRoem);
-    const mostNat = top((a, b) => b.natTotal - a.natTotal);
-    const mostPit = top((a, b) => b.pitTotal - a.pitTotal);
-
-    card(
-      "Hoogste punten (zonder roem)",
-      `<b>${escapeHTML(bestPoints.team)}</b><br>${bestPoints.bestPoints} punten`
-    );
-    card(
-      "Laagste punten (zonder roem)",
-      `<b>${escapeHTML(worstPoints.team)}</b><br>${worstPoints.worstPoints} punten`
-    );
-    card("Meeste roem", `<b>${escapeHTML(bestRoem.team)}</b><br>${bestRoem.bestRoem} roem`);
-    card("Meeste Nat", `<b>${escapeHTML(mostNat.team)}</b><br>${mostNat.natTotal}× Nat`);
-    card("Meeste Pit", `<b>${escapeHTML(mostPit.team)}</b><br>${mostPit.pitTotal}× Pit`);
-  };
-
+  /* ---------- PDF overlay + WhatsApp ---------- */
   const pdfHTMLForEntry = (entry) => {
     let rowsHtml = "";
     for (const r of entry.rounds) {
@@ -859,7 +797,6 @@ ${escapeHTML(entry.winnerText)}
 
   const buildWhatsAppTextForEntry = (entry) => {
     const intro = "Hierbij de puntentelling van een memorabele pot!";
-
     const lines = [
       intro,
       "",
@@ -874,7 +811,6 @@ ${escapeHTML(entry.winnerText)}
       "",
       entry.winnerText,
     ];
-
     return lines.join("\n");
   };
 
@@ -888,10 +824,11 @@ ${escapeHTML(entry.winnerText)}
     pdfFrame.srcdoc = html;
     pdfOverlay.style.display = "block";
 
-    // ✅ Geen print knop meer; deze knop wordt WhatsApp delen
-    if (pdfPrint) {
-      pdfPrint.textContent = "💬 WhatsApp";
-      pdfPrint.onclick = () => shareToWhatsApp(shareText || "Hierbij de puntentelling van een memorabele pot!");
+    // In de overlay: geen print-knop, maar WhatsApp
+    if (pdfShareBtn) {
+      pdfShareBtn.textContent = "💬 WhatsApp";
+      pdfShareBtn.onclick = () =>
+        shareToWhatsApp(shareText || "Hierbij de puntentelling van een memorabele pot!");
     }
 
     pdfBack.onclick = () => {
@@ -900,11 +837,150 @@ ${escapeHTML(entry.winnerText)}
     };
   };
 
-  // ✅ We openen altijd de overlay (geen print flow meer)
   const openGameAsPDF = (entry) => {
     const html = pdfHTMLForEntry(entry);
     const shareText = buildWhatsAppTextForEntry(entry);
     openPdfOverlay(html, `${entry.wijTeam} - ${entry.zijTeam}`, shareText);
+  };
+
+  /* ---------- Highscores (incl. roem + datum) ---------- */
+  const renderHighscores = (hist) => {
+    highscoresEl.innerHTML = "";
+
+    const card = (title, team, valueLine, dateIso, note = "") => {
+      const d = document.createElement("div");
+      d.className = "badge";
+      const dateLine = dateIso ? `📅 ${escapeHTML(fmtDate(dateIso))}` : "";
+      const noteLine = note ? `<div style="opacity:.85; margin-top:4px;">${note}</div>` : "";
+      d.innerHTML = `
+        <div style="font-weight:900; margin-bottom:6px;">${escapeHTML(title)}</div>
+        <div><b>${escapeHTML(team)}</b></div>
+        <div style="margin-top:2px;">${valueLine}</div>
+        <div style="opacity:.85; margin-top:4px;">${dateLine}</div>
+        ${noteLine}
+      `;
+      highscoresEl.appendChild(d);
+    };
+
+    if (!hist.length) {
+      const d = document.createElement("div");
+      d.className = "badge";
+      d.innerHTML =
+        `<div style="font-weight:900; margin-bottom:6px;">Nog geen highscores</div>` +
+        `<div>Speel een potje en druk daarna op <b>Nieuw potje</b> om het op te slaan.</div>`;
+      highscoresEl.appendChild(d);
+      return;
+    }
+
+    const maxIso = (a, b) => (!a ? b : !b ? a : a > b ? a : b);
+
+    // per team stats
+    const teamStats = new Map();
+    const ensure = (team) => {
+      const key = team || "Onbekend";
+      if (!teamStats.has(key)) {
+        teamStats.set(key, {
+          team: key,
+
+          bestTotal: -Infinity,
+          bestTotalAt: null,
+
+          worstTotal: Infinity,
+          worstTotalAt: null,
+
+          bestRoem: -Infinity,
+          bestRoemAt: null,
+
+          natTotal: 0,
+          pitTotal: 0,
+          lastSeenAt: null,
+        });
+      }
+      return teamStats.get(key);
+    };
+
+    // update from each game: use endedAt as "datum"
+    for (const g of hist) {
+      const at = g.endedAt || g.startedAt || null;
+
+      const a = ensure(g.wijTeam);
+      a.lastSeenAt = maxIso(a.lastSeenAt, at);
+      a.natTotal += g.natWij || 0;
+      a.pitTotal += g.pitWij || 0;
+      if (typeof g.totalWij === "number") {
+        if (g.totalWij > a.bestTotal) {
+          a.bestTotal = g.totalWij;
+          a.bestTotalAt = at;
+        }
+        if (g.totalWij < a.worstTotal) {
+          a.worstTotal = g.totalWij;
+          a.worstTotalAt = at;
+        }
+      }
+      if (typeof g.roemWij === "number" && g.roemWij > a.bestRoem) {
+        a.bestRoem = g.roemWij;
+        a.bestRoemAt = at;
+      }
+
+      const b = ensure(g.zijTeam);
+      b.lastSeenAt = maxIso(b.lastSeenAt, at);
+      b.natTotal += g.natZij || 0;
+      b.pitTotal += g.pitZij || 0;
+      if (typeof g.totalZij === "number") {
+        if (g.totalZij > b.bestTotal) {
+          b.bestTotal = g.totalZij;
+          b.bestTotalAt = at;
+        }
+        if (g.totalZij < b.worstTotal) {
+          b.worstTotal = g.totalZij;
+          b.worstTotalAt = at;
+        }
+      }
+      if (typeof g.roemZij === "number" && g.roemZij > b.bestRoem) {
+        b.bestRoem = g.roemZij;
+        b.bestRoemAt = at;
+      }
+    }
+
+    const arr = Array.from(teamStats.values());
+    const top = (cmp) => arr.slice().sort(cmp)[0];
+
+    // ✅ Hoogste/laagste punten inclusief roem (= totaal)
+    const bestTotal = top((a, b) => b.bestTotal - a.bestTotal);
+    const worstTotal = top((a, b) => a.worstTotal - b.worstTotal);
+
+    const bestRoem = top((a, b) => b.bestRoem - a.bestRoem);
+
+    const mostNat = top((a, b) => b.natTotal - a.natTotal);
+    const mostPit = top((a, b) => b.pitTotal - a.pitTotal);
+
+    card(
+      "Hoogste totaal (incl. roem)",
+      bestTotal.team,
+      `${bestTotal.bestTotal} totaal`,
+      bestTotal.bestTotalAt
+    );
+    card(
+      "Laagste totaal (incl. roem)",
+      worstTotal.team,
+      `${worstTotal.worstTotal} totaal`,
+      worstTotal.worstTotalAt
+    );
+    card("Meeste roem (in 1 pot)", bestRoem.team, `${bestRoem.bestRoem} roem`, bestRoem.bestRoemAt);
+    card(
+      "Meeste Nat (opgeteld)",
+      mostNat.team,
+      `${mostNat.natTotal}× Nat`,
+      mostNat.lastSeenAt,
+      "Datum = laatste pot in historie"
+    );
+    card(
+      "Meeste Pit (opgeteld)",
+      mostPit.team,
+      `${mostPit.pitTotal}× Pit`,
+      mostPit.lastSeenAt,
+      "Datum = laatste pot in historie"
+    );
   };
 
   const renderHistory = () => {
@@ -937,9 +1013,10 @@ ${escapeHTML(entry.winnerText)}
       const btns = document.createElement("div");
       btns.className = "histBtns";
 
-      const pdfBtn = document.createElement("button");
-      pdfBtn.textContent = "📄 PDF";
-      pdfBtn.onclick = () => openGameAsPDF(entry);
+      // ✅ PDF knop vervangen door "WhatsApp"
+      const waBtn = document.createElement("button");
+      waBtn.textContent = "💬 WhatsApp";
+      waBtn.onclick = () => openGameAsPDF(entry);
 
       const delBtn = document.createElement("button");
       delBtn.textContent = "🗑️ Verwijder";
@@ -951,7 +1028,7 @@ ${escapeHTML(entry.winnerText)}
         renderHighscores(next);
       };
 
-      btns.appendChild(pdfBtn);
+      btns.appendChild(waBtn);
       btns.appendChild(delBtn);
 
       item.appendChild(meta);
@@ -1175,10 +1252,53 @@ ${escapeHTML(entry.winnerText)}
 
   newGameBtn.addEventListener("click", newGame);
 
+  /* ---------- Hard Refresh knop (helemaal onderaan) ---------- */
+  const hardRefresh = async () => {
+    showToast("Refresh… 🔄");
+    try {
+      // caches leeg (lijkt het meest op Ctrl+F5)
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      // service workers unregister
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch {}
+
+    // cache-busting reload
+    try {
+      const url = new URL(location.href);
+      url.searchParams.set("r", String(Date.now()));
+      location.replace(url.toString());
+    } catch {
+      location.reload();
+    }
+  };
+
+  const injectHardRefreshButtonAtBottom = () => {
+    if (document.getElementById("hardRefreshCard")) return;
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.id = "hardRefreshCard";
+    card.innerHTML = `
+      <button id="hardRefreshBtn" class="primary">🔄 Refresh</button>
+      <div class="smallNote">Doet een “Ctrl+F5”-achtige refresh (cache leeg + opnieuw laden).</div>
+    `;
+    document.body.appendChild(card);
+
+    const btn = card.querySelector("#hardRefreshBtn");
+    btn?.addEventListener("click", hardRefresh);
+  };
+
   /* ---------- Boot ---------- */
   loadGame();
   updateNames();
   adjustBars();
   recompute();
   renderHistory();
+  injectHardRefreshButtonAtBottom();
 })();

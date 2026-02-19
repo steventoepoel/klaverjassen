@@ -7,25 +7,12 @@
 
   <meta name="theme-color" content="#d32f2f" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="René's Telraam" />
+  <meta name="apple-mobile-web-app-title" content="René’s Telraam" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
   <link rel="icon" href="icon-512.png" />
   <link rel="apple-touch-icon" href="icon-512.png" />
-
-  <!-- Manifest als data-uri, maar met echte icon bestanden -->
-  <link rel="manifest" href='data:application/json,{
-    "name":"René’s Telraam",
-    "short_name":"René's Telraam",
-    "start_url":".",
-    "display":"standalone",
-    "background_color":"#121212",
-    "theme_color":"#d32f2f",
-    "icons":[
-      {"src":"icon-512.png","sizes":"512x512","type":"image/png"},
-      {"src":"logo.png","sizes":"192x192","type":"image/png"}
-    ]
-  }'>
+  <link rel="manifest" href="./manifest.json?v=20260219" />
 
   <style>
     :root{
@@ -34,6 +21,8 @@
       --zij:#d6f7d6; --zijRoem:#b8efb8;
       --line:rgba(0,0,0,.15);
       --shadow:0 2px 8px rgba(0,0,0,.18);
+      --nameBg:#ffffff; --nameText:#000000;
+      --inputText:#000000;
     }
     @media (prefers-color-scheme: dark){
       :root{
@@ -42,6 +31,10 @@
         --zij:#2a5a3a; --zijRoem:#224b31;
         --line:rgba(255,255,255,.12);
         --shadow:0 2px 10px rgba(0,0,0,.45);
+
+        /* jouw wens */
+        --nameBg:#2b2b2b; --nameText:#ffffff;
+        --inputText:#ffffff; /* getallen wit */
       }
     }
 
@@ -53,7 +46,7 @@
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
       margin:0;
       padding:10px;
-      padding-bottom:100px;
+      padding-bottom:116px;
       -webkit-tap-highlight-color:transparent;
       overscroll-behavior:none;
     }
@@ -74,7 +67,7 @@
       box-shadow:var(--shadow);
     }
     .headerLogo{
-      width:92px; height:54px;
+      width:110px; height:60px; /* iets groter/breder */
       border-radius:14px;
       object-fit:contain;
       background:rgba(0,0,0,.04);
@@ -98,6 +91,7 @@
       background:var(--accent);
       color:#fff;
       display:none;
+      font-weight:900;
     }
 
     .card{
@@ -121,6 +115,8 @@
       border-radius:999px;
       border:1px solid rgba(0,0,0,.25);
       outline:none;
+      color:var(--inputText);
+      background:transparent;
     }
     @media (prefers-color-scheme: dark){
       input{ border:1px solid rgba(255,255,255,.18); }
@@ -133,6 +129,9 @@
       min-width: 240px;
       text-align:left;
       padding-left:14px;
+      background:var(--nameBg);
+      color:var(--nameText);
+      border:1px solid var(--line);
     }
     @media (max-width:420px){
       .nameInput{ width: 100%; max-width:none; min-width:0; }
@@ -155,6 +154,7 @@
       background:var(--accent);
       color:#fff;
       margin-top:6px;
+      font-weight:900;
     }
 
     #winner{
@@ -178,12 +178,12 @@
       position:fixed;
       left:50%;
       transform:translateX(-50%);
-      bottom:96px;
+      bottom:110px;
       background:rgba(0,0,0,.85);
       color:#fff;
       padding:12px 14px;
       border-radius:14px;
-      font-weight:800;
+      font-weight:900;
       max-width:min(560px, calc(100% - 20px));
       text-align:center;
       opacity:0;
@@ -197,10 +197,35 @@
       box-shadow:0 0 0 3px rgba(255,59,48,.22) !important;
     }
 
+    /* Roem quick buttons */
+    .roemCell{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+    }
+    .roemBtns{
+      display:flex;
+      gap:6px;
+    }
+    .roemBtns button{
+      width:auto;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
+      font-weight:900;
+      font-size:13px;
+      line-height:1;
+    }
+    .roemBtns button:active{ transform:scale(.98); }
+
+    /* Nat/Pit bar */
     #npBar{
       position:fixed;
       left:10px; right:10px;
-      bottom:10px; /* JS schuift hem boven toetsenbord */
+      bottom:10px;
       z-index:9998;
       background:var(--card);
       border:1px solid var(--line);
@@ -231,6 +256,31 @@
       border:1px solid var(--line);
     }
 
+    /* Export/import */
+    .rowButtons{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .rowButtons button{
+      flex:1;
+      min-width:160px;
+      width:auto;
+      padding:12px;
+      font-size:15px;
+      border-radius:12px;
+      border:none;
+      background:var(--accent);
+      color:#fff;
+      font-weight:900;
+    }
+    .rowButtons button.secondary{
+      background:transparent;
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+
+    /* PDF overlay */
     #pdfOverlay{
       display:none;
       position:fixed;
@@ -300,6 +350,7 @@
     #history .histBtns button{
       width:auto; padding:10px 12px; font-size:14px;
       border-radius:10px; border:none; background:var(--accent); color:#fff;
+      font-weight:900;
     }
     #history .histBtns button.secondary{
       background:transparent;
@@ -308,23 +359,10 @@
     }
 
     canvas{ position:fixed; top:0; left:0; pointer-events:none; }
-
-    /* als JS faalt, tonen we dit */
-    #fatal{
-      display:none;
-      background:#ff3b30;
-      color:#fff;
-      padding:12px;
-      border-radius:14px;
-      font-weight:900;
-      margin-bottom:10px;
-    }
   </style>
 </head>
 
 <body>
-  <div id="fatal"></div>
-
   <div class="stickyHeader">
     <div class="headerCard">
       <img src="logo.png" class="headerLogo" alt="logo">
@@ -357,9 +395,7 @@
           <th>Roem</th>
         </tr>
       </thead>
-
       <tbody id="rows"></tbody>
-
       <tfoot>
         <tr class="colTotals">
           <th style="text-align:left;">Som</th>
@@ -379,6 +415,17 @@
 
   <div id="winner"></div>
   <button id="newGameBtn" class="primary">Nieuw potje</button>
+
+  <div class="card">
+    <div class="rowButtons">
+      <button id="exportBtn">⬇️ Export historie</button>
+      <button id="importBtn" class="secondary">⬆️ Import historie</button>
+      <input id="importFile" type="file" accept="application/json" style="display:none;">
+    </div>
+    <div class="smallNote" style="margin-top:8px;">
+      Export/Import is handig bij een nieuwe telefoon of als Safari gegevens wist.
+    </div>
+  </div>
 
   <div class="card">
     <h3 style="margin:0 0 10px;">Highscores</h3>
@@ -412,7 +459,7 @@
 
   <canvas id="confetti"></canvas>
 
-  <!-- script helemaal onderaan -->
-  <script src="./app.js"></script>
+  <!-- cache-busting -->
+  <script src="./app.js?v=20260219"></script>
 </body>
 </html>

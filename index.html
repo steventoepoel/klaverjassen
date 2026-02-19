@@ -4,10 +4,15 @@
 <meta charset="UTF-8">
 <title>René’s Telraam</title>
 
-<!-- Voorkomt iOS-inzoom zoveel mogelijk + houdt layout stabiel -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#d32f2f">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Telraam">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
 
 <link rel="manifest" href='data:application/json,{
   "name":"René’s Telraam",
@@ -25,36 +30,75 @@
 <style>
 :root{
   --bg:#f2f2f2; --card:#fff; --text:#000; --accent:#d32f2f;
-
-  --wij:#cfe9ff;      /* lichtblauw */
-  --wijRoem:#a9d4ff;  /* iets donkerder */
-  --zij:#d6f7d6;      /* lichtgroen */
-  --zijRoem:#b8efb8;  /* iets donkerder */
+  --wij:#cfe9ff; --wijRoem:#a9d4ff;
+  --zij:#d6f7d6; --zijRoem:#b8efb8;
+  --line:rgba(0,0,0,.15);
+  --shadow:0 2px 8px rgba(0,0,0,.18);
 }
 @media (prefers-color-scheme: dark){
   :root{
     --bg:#121212; --card:#1e1e1e; --text:#fff;
-    /* iets “dieper” in dark mode maar nog steeds duidelijk */
-    --wij:#2a4b63;
-    --wijRoem:#1f3c52;
-    --zij:#2a5a3a;
-    --zijRoem:#224b31;
+    --wij:#2a4b63; --wijRoem:#1f3c52;
+    --zij:#2a5a3a; --zijRoem:#224b31;
+    --line:rgba(255,255,255,.12);
+    --shadow:0 2px 10px rgba(0,0,0,.45);
   }
 }
 
 *{box-sizing:border-box;}
+html,body{height:100%;}
 body{
   background:var(--bg);
   color:var(--text);
-  font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   margin:0;
   padding:10px;
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
 }
 
-.logo{
-  display:block;
-  margin:10px auto 10px;
-  max-width:180px;
+/* Sticky header (app-gevoel) */
+.stickyHeader{
+  position:sticky;
+  top:0;
+  z-index:50;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:saturate(180%) blur(10px);
+  padding:8px 8px 10px;
+  margin:-10px -10px 10px; /* full-bleed */
+  border-bottom:1px solid var(--line);
+}
+.headerCard{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+  margin:0 10px;
+  background:var(--card);
+  border-radius:14px;
+  box-shadow:var(--shadow);
+}
+.headerLogo{
+  width:54px;
+  height:54px;
+  border-radius:14px;
+  object-fit:cover;
+}
+.headerText{
+  flex:1;
+  min-width:0;
+}
+.headerLine1{
+  font-weight:900;
+  font-size:14px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.headerLine2{
+  margin-top:2px;
+  font-weight:900;
+  font-size:18px;
 }
 
 .card{
@@ -62,40 +106,46 @@ body{
   border-radius:14px;
   padding:12px;
   margin-bottom:10px;
-  box-shadow:0 2px 8px rgba(0,0,0,.18);
+  box-shadow:var(--shadow);
 }
 
 table{width:100%; border-collapse:collapse;}
 th,td{padding:6px; text-align:center; vertical-align:middle;}
 
-.smallNote{
-  font-size:12px;
-  opacity:.8;
-}
+.smallNote{font-size:12px; opacity:.82; margin-top:8px;}
 
 input{
-  /* Belangrijk: >=16px om iOS zoom te voorkomen */
   font-size:16px;
-  width:52px;                 /* smaller */
+  width:54px;
   padding:8px 10px;
   text-align:center;
-  border-radius:999px;        /* extra rond */
+  border-radius:999px;
   border:1px solid rgba(0,0,0,.25);
   outline:none;
 }
-
 @media (prefers-color-scheme: dark){
   input{ border:1px solid rgba(255,255,255,.18); }
 }
+input:focus{ box-shadow:0 0 0 3px rgba(211,47,47,.25); }
 
-input:focus{
-  box-shadow:0 0 0 3px rgba(211,47,47,.25);
+.nameInput{
+  width: calc(50% - 8px);
+  max-width: 280px;
+  min-width: 160px;
+  text-align:left;
+  padding-left:14px;
+}
+@media (max-width:420px){
+  .nameInput{ width: 100%; max-width: none; }
 }
 
 .inp-wij{ background:var(--wij); }
 .inp-wijroem{ background:var(--wijRoem); }
 .inp-zij{ background:var(--zij); }
 .inp-zijroem{ background:var(--zijRoem); }
+
+.sepRow td{ padding:0; height:10px; }
+.sepLine{ width:100%; height:1px; background:var(--line); }
 
 button{
   width:100%;
@@ -107,16 +157,7 @@ button{
   color:#fff;
   margin-top:6px;
 }
-
 #installBtn{display:none;}
-
-#scoreCenter{
-  text-align:center;
-  font-weight:700;
-  margin:10px 0 6px;
-}
-#scoreCenter .line1{ font-size:18px; }
-#scoreCenter .line2{ font-size:18px; margin-top:4px; }
 
 #winner{
   font-size:36px;
@@ -125,16 +166,33 @@ button{
   margin:10px 0;
 }
 
-#history div{
-  padding:6px 4px;
-  border-bottom:1px solid rgba(127,127,127,.35);
+.grid2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+@media (max-width:520px){ .grid2{ grid-template-columns:1fr; } }
+.badge{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px;
 }
 
-canvas{
-  position:fixed;
-  top:0; left:0;
-  pointer-events:none;
+#history .histItem{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid var(--line);
 }
+#history .histMeta{ flex:1; }
+#history .histBtns{ display:flex; gap:8px; flex-wrap:wrap; }
+#history .histBtns button{
+  width:auto; padding:10px 12px; font-size:14px; border-radius:10px;
+}
+
+canvas{ position:fixed; top:0; left:0; pointer-events:none; }
 
 /* Splashscreen */
 #splash{
@@ -147,7 +205,7 @@ canvas{
   align-items:center;
   z-index:9999;
 }
-#splash img{ width:180px; }
+#splash img{ width:190px; }
 #splash h2{ margin:10px 0 0; color:var(--accent); }
 </style>
 </head>
@@ -159,19 +217,26 @@ canvas{
   <h2>René’s Telraam</h2>
 </div>
 
-<img src="logo.png" class="logo" alt="René’s Telraam">
-
-<button id="installBtn">📲 Installeer app</button>
+<div class="stickyHeader">
+  <div class="headerCard">
+    <img src="logo.png" class="headerLogo" alt="logo">
+    <div class="headerText">
+      <div class="headerLine1" id="namesLineSticky">Wij - Zij</div>
+      <div class="headerLine2" id="pointsLineSticky">0 - 0</div>
+    </div>
+    <button id="installBtn" style="width:auto; margin:0; padding:10px 12px; font-size:14px; border-radius:12px;">📲</button>
+  </div>
+</div>
 
 <div class="card">
   <b>Team Wij</b><br>
-  <input id="w1" placeholder="Speler 1" autocomplete="off">
-  <input id="w2" placeholder="Speler 2" autocomplete="off"><br><br>
+  <input id="w1" class="nameInput" placeholder="Speler 1" autocomplete="off">
+  <input id="w2" class="nameInput" placeholder="Speler 2" autocomplete="off"><br><br>
   <b>Team Zij</b><br>
-  <input id="z1" placeholder="Speler 1" autocomplete="off">
-  <input id="z2" placeholder="Speler 2" autocomplete="off">
-  <div class="smallNote" style="margin-top:8px;">
-    Punten: typ een getal, of <b>n / p</b> (hoofdletters mag ook).
+  <input id="z1" class="nameInput" placeholder="Speler 1" autocomplete="off">
+  <input id="z2" class="nameInput" placeholder="Speler 2" autocomplete="off">
+  <div class="smallNote">
+    Punten: typ een getal, of <b>N</b>/<b>P</b>. P telt als 0 punten en geeft automatisch <b>+100 roem</b>.
   </div>
 </div>
 
@@ -188,34 +253,16 @@ canvas{
     </thead>
     <tbody id="rows"></tbody>
     <tfoot>
+      <!-- Alles op 1 rij: punten + roem + totaal -->
       <tr>
-        <th>Punten</th>
-        <th id="puntenWij">0</th>
+        <th style="text-align:left;">Totaal</th>
+        <th><span id="puntenWij">0</span> <span style="opacity:.65;">(+</span><span id="roemWij">0</span><span style="opacity:.65;">)</span> = <span id="totalWij">0</span></th>
         <th></th>
-        <th id="puntenZij">0</th>
-        <th></th>
-      </tr>
-      <tr>
-        <th>Roem</th>
-        <th id="roemWij">0</th>
-        <th></th>
-        <th id="roemZij">0</th>
-        <th></th>
-      </tr>
-      <tr>
-        <th>Totaal</th>
-        <th id="totalWij">0</th>
-        <th></th>
-        <th id="totalZij">0</th>
+        <th><span id="puntenZij">0</span> <span style="opacity:.65;">(+</span><span id="roemZij">0</span><span style="opacity:.65;">)</span> = <span id="totalZij">0</span></th>
         <th></th>
       </tr>
     </tfoot>
   </table>
-</div>
-
-<div id="scoreCenter">
-  <div class="line1" id="namesLine">Wij - Zij</div>
-  <div class="line2" id="pointsLine">0 - 0</div>
 </div>
 
 <div id="winner"></div>
@@ -223,7 +270,12 @@ canvas{
 <button onclick="nieuwPotje()">Nieuw potje</button>
 
 <div class="card">
-  <h3 style="margin:0 0 8px;">Historie</h3>
+  <h3 style="margin:0 0 10px;">Highscores</h3>
+  <div class="grid2" id="highscores"></div>
+</div>
+
+<div class="card">
+  <h3 style="margin:0 0 10px;">Historie</h3>
   <div id="history"></div>
 </div>
 
@@ -231,53 +283,37 @@ canvas{
 
 <script>
 /* ---------------- Splash ---------------- */
-setTimeout(() => (document.getElementById("splash").style.display = "none"), 1200);
+setTimeout(() => (document.getElementById("splash").style.display = "none"), 900);
 
-/* ---------------- Install button (PWA prompt) ---------------- */
+/* ---------------- App install button ---------------- */
 let deferredPrompt;
 const installBtn = document.getElementById("installBtn");
+
+function isStandaloneMode(){
+  return window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+}
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   deferredPrompt = e;
-  installBtn.style.display = "block";
+  if (!isStandaloneMode()) installBtn.style.display = "block";
 });
 installBtn.onclick = () => deferredPrompt && deferredPrompt.prompt();
+if (isStandaloneMode()) installBtn.style.display = "none";
 
-/* ---------------- App logic ---------------- */
+/* ---------------- Helpers ---------------- */
 const TOTAL = 162, ROUNDS = 16;
-const rows = document.getElementById("rows");
 
-for (let i = 1; i <= ROUNDS; i++) {
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td>${i}</td>
-    <td><input class="inp-wij" data-t="w" data-r="${i}" inputmode="text" autocapitalize="off" spellcheck="false"></td>
-    <td><input class="inp-wijroem" data-t="rw" data-r="${i}" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
-    <td><input class="inp-zij" data-t="z" data-r="${i}" inputmode="text" autocapitalize="off" spellcheck="false"></td>
-    <td><input class="inp-zijroem" data-t="rz" data-r="${i}" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
-  `;
-  rows.appendChild(tr);
+function nowISO(){ return new Date().toISOString(); }
+function fmtDateTime(iso){
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
-
-/* Enter = toetsenbord weg (blur) */
-document.querySelectorAll("input").forEach(inp => {
-  inp.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      inp.blur();
-      window.scrollTo({ top: window.scrollY, behavior: "smooth" });
-    }
-  });
-});
-
-const inputsScore = document.querySelectorAll('input[data-t]');
-inputsScore.forEach(inp => inp.addEventListener("input", onScoreInput));
-
-[w1,w2,z1,z2].forEach(i => i.addEventListener("input", () => {
-  updateNames();
-  save();
-}));
-
+function escapeHTML(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
 function teamWijNaam(){
   const a = (w1.value || "Wij").trim();
   const b = (w2.value || "").trim();
@@ -291,81 +327,174 @@ function teamZijNaam(){
 function updateNames(){
   tWij.textContent = teamWijNaam();
   tZij.textContent = teamZijNaam();
-  document.getElementById("namesLine").textContent = `${teamWijNaam()} - ${teamZijNaam()}`;
+  namesLineSticky.textContent = `${teamWijNaam()} - ${teamZijNaam()}`;
 }
 
-function q(t,r){
-  return document.querySelector(`[data-t="${t}"][data-r="${r}"]`);
+/* ---------------- Build rows + separators ---------------- */
+const rows = document.getElementById("rows");
+for (let i = 1; i <= ROUNDS; i++) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${i}</td>
+    <td><input class="inp-wij" data-t="w" data-r="${i}" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
+    <td><input class="inp-wijroem" data-t="rw" data-r="${i}" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
+    <td><input class="inp-zij" data-t="z" data-r="${i}" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
+    <td><input class="inp-zijroem" data-t="rz" data-r="${i}" type="text" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
+  `;
+  rows.appendChild(tr);
+
+  if (i % 4 === 0 && i < 16) {
+    const sep = document.createElement("tr");
+    sep.className = "sepRow";
+    sep.innerHTML = `<td colspan="5"><div class="sepLine"></div></td>`;
+    rows.appendChild(sep);
+  }
 }
 
-let suppress = false;            // voorkomt “loop” bij automatisch bijwerken
-let lastWinnerKey = null;        // voorkomt confetti spam
+/* Enter = toetsenbord weg (blur) */
+document.querySelectorAll("input").forEach(inp => {
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      inp.blur();
+    }
+  });
+});
 
+/* ---------------- Storage keys ---------------- */
+const GAME_KEY = "rene_telraam_game_v5";
+const HIST_KEY = "rene_telraam_history_v2";
+
+/* ---------------- Game state ---------------- */
+let suppress = false;
+let lastWinnerKey = null;
+let gameStartedAt = null;
+let gameEndedAt = null;
+
+/* ---------------- Query helpers ---------------- */
+function q(t,r){ return document.querySelector(`[data-t="${t}"][data-r="${r}"]`); }
+function allScoreInputs(){ return document.querySelectorAll('input[data-t]'); }
+
+/* N/P */
 function normalizeSpecial(v){
   const s = (v || "").trim();
   if (!s) return "";
-  if (["n","N","p","P"].includes(s)) return s.toLowerCase(); // n of p
+  const c = s[0];
+  if (c === "n" || c === "N") return "N";
+  if (c === "p" || c === "P") return "P";
   return s;
 }
+function isNumericLike(s){
+  if (s === "" || s == null) return false;
+  return !isNaN(String(s).trim());
+}
+function pointsValueFromDisplay(s){
+  const v = normalizeSpecial(s);
+  if (v === "N" || v === "P") return 0;
+  if (isNumericLike(v)) return Math.max(0, Math.min(TOTAL, parseInt(v,10)));
+  return null;
+}
+
+/* P => +100 roem (eenmalig) */
+function roemFieldFor(team, round){
+  return (team === "w") ? q("rw", round) : q("rz", round);
+}
+function setPBonus(team, round, apply){
+  const ptsEl = q(team, round);
+  const roemEl = roemFieldFor(team, round);
+
+  const had = ptsEl.dataset.pbonus === "1";
+  if (apply && !had){
+    const current = parseInt(roemEl.value,10) || 0;
+    roemEl.value = String(current + 100);
+    ptsEl.dataset.pbonus = "1";
+  }
+  if (!apply && had){
+    const current = parseInt(roemEl.value,10) || 0;
+    roemEl.value = String(Math.max(0, current - 100));
+    ptsEl.dataset.pbonus = "0";
+  }
+}
+
+/* ---------------- Wire input events ---------------- */
+allScoreInputs().forEach(inp => inp.addEventListener("input", onScoreInput));
+[w1,w2,z1,z2].forEach(i => i.addEventListener("input", () => { updateNames(); saveGame(); }));
 
 function onScoreInput(e){
   if (suppress) return;
+
+  if (!gameStartedAt) { gameStartedAt = nowISO(); gameEndedAt = null; }
 
   const el = e.target;
   const t = el.dataset.t;
   const r = parseInt(el.dataset.r, 10);
 
-  // Alleen puntenvelden triggeren het automatisch aanvullen
-  if (t !== "w" && t !== "z") {
+  if (t === "rw" || t === "rz"){
     updateTotalsAndUI();
-    save();
+    saveGame();
     return;
   }
 
-  const val = normalizeSpecial(el.value);
+  if (t !== "w" && t !== "z") return;
+
+  const prevNorm = el.dataset.prevNorm || "";
+  const valNorm = normalizeSpecial(el.value);
 
   const otherT = (t === "w") ? "z" : "w";
   const otherEl = q(otherT, r);
 
   suppress = true;
 
-  if (val === "") {
-    // leeg => tegenover ook leeg (alleen als die door ons ingevuld was)
-    // we zetten hem gewoon leeg zodat het consistent blijft
+  if (valNorm === "") {
     otherEl.value = "";
-  } else if (val === "n" || val === "p") {
-    // nat/pit: andere krijgt 162, deze 0
-    el.value = "0";
+  } else if (valNorm === "N" || valNorm === "P") {
+    el.value = valNorm;
     otherEl.value = String(TOTAL);
-  } else if (!isNaN(val)) {
-    const num = Math.max(0, Math.min(TOTAL, parseInt(val, 10)));
+  } else if (isNumericLike(valNorm)) {
+    const num = Math.max(0, Math.min(TOTAL, parseInt(valNorm,10)));
     el.value = String(num);
     otherEl.value = String(TOTAL - num);
   } else {
-    // ongeldige input => laat staan, maar probeer tegenover leeg te maken
     otherEl.value = "";
   }
+
+  if (prevNorm === "P" && valNorm !== "P") setPBonus(t, r, false);
+  if (prevNorm !== "P" && valNorm === "P") setPBonus(t, r, true);
+
+  el.dataset.prevNorm = valNorm;
 
   suppress = false;
 
   updateTotalsAndUI();
-  save();
+  saveGame();
 }
 
+/* ---------------- Totals + Winner ---------------- */
 function updateTotalsAndUI(){
   let tw=0, tz=0, rw=0, rz=0;
   let ingevuld = true;
 
+  let nWij=0, nZij=0, pWij=0, pZij=0;
+
   for (let i=1; i<=ROUNDS; i++){
-    const w = q("w",i).value.trim();
-    const z = q("z",i).value.trim();
+    const wDisp = q("w",i).value.trim();
+    const zDisp = q("z",i).value.trim();
 
-    // “ingevuld” betekent: in elke ronde is er een geldige (numerieke) stand aan beide kanten
-    // Door onze auto-aanvulling is dat normaal gelijk; maar als iemand iets raars typt, wordt het “niet ingevuld”
-    if (w === "" || z === "" || isNaN(w) || isNaN(z)) ingevuld = false;
+    const wNorm = normalizeSpecial(wDisp);
+    const zNorm = normalizeSpecial(zDisp);
 
-    tw += parseInt(w,10) || 0;
-    tz += parseInt(z,10) || 0;
+    if (wNorm === "N") nWij++;
+    if (zNorm === "N") nZij++;
+    if (wNorm === "P") pWij++;
+    if (zNorm === "P") pZij++;
+
+    const wPts = pointsValueFromDisplay(wDisp);
+    const zPts = pointsValueFromDisplay(zDisp);
+
+    if (wPts === null || zPts === null) ingevuld = false;
+
+    tw += (wPts ?? 0);
+    tz += (zPts ?? 0);
 
     rw += parseInt(q("rw",i).value,10) || 0;
     rz += parseInt(q("rz",i).value,10) || 0;
@@ -381,77 +510,302 @@ function updateTotalsAndUI(){
   totalWij.textContent = totaalWij;
   totalZij.textContent = totaalZij;
 
-  document.getElementById("pointsLine").textContent = `${tw} - ${tz}`;
+  pointsLineSticky.textContent = `${tw} - ${tz}`;
 
-  // winnaar pas bij alle 16 rondes “netjes” ingevuld
-  if (ingevuld) showWinnerOnce(totaalWij, totaalZij);
-  else {
+  if (ingevuld) {
+    if (!gameEndedAt) gameEndedAt = nowISO();
+    showWinnerOnce(totaalWij, totaalZij);
+  } else {
     winner.textContent = "";
-    lastWinnerKey = null; // als ze nog bezig zijn, later opnieuw kunnen tonen
+    lastWinnerKey = null;
+    gameEndedAt = null;
   }
+
+  document.body.dataset.nWij = String(nWij);
+  document.body.dataset.nZij = String(nZij);
+  document.body.dataset.pWij = String(pWij);
+  document.body.dataset.pZij = String(pZij);
 }
 
 function showWinnerOnce(w, z){
   const name = (w > z) ? teamWijNaam() : teamZijNaam();
   const key = `${w}|${z}|${name}`;
-
   winner.textContent = `🏆 Winnaar: ${name} 🏆`;
-
-  if (lastWinnerKey !== key) {
-    lastWinnerKey = key;
-    confetti();
-  }
+  if (lastWinnerKey !== key) { lastWinnerKey = key; confetti(); }
 }
 
-function save(){
-  const d = { w1:w1.value, w2:w2.value, z1:z1.value, z2:z2.value, lastWinnerKey };
-  inputsScore.forEach(i => d[i.dataset.t + i.dataset.r] = i.value);
-  localStorage.setItem("game", JSON.stringify(d));
+/* ---------------- Save/load game ---------------- */
+function saveGame(){
+  const d = {
+    w1:w1.value, w2:w2.value, z1:z1.value, z2:z2.value,
+    gameStartedAt, gameEndedAt, lastWinnerKey
+  };
+  allScoreInputs().forEach(i => {
+    const k = i.dataset.t + i.dataset.r;
+    d[k] = i.value;
+    if (i.dataset.t === "w" || i.dataset.t === "z"){
+      d[k + "_pbonus"] = i.dataset.pbonus || "0";
+      d[k + "_prev"] = i.dataset.prevNorm || normalizeSpecial(i.value);
+    }
+  });
+  localStorage.setItem(GAME_KEY, JSON.stringify(d));
 }
 
-function load(){
-  const d = JSON.parse(localStorage.getItem("game") || "{}");
+function loadGame(){
+  const d = JSON.parse(localStorage.getItem(GAME_KEY) || "{}");
+
   w1.value = d.w1 || "";
   w2.value = d.w2 || "";
   z1.value = d.z1 || "";
   z2.value = d.z2 || "";
+
+  gameStartedAt = d.gameStartedAt || null;
+  gameEndedAt = d.gameEndedAt || null;
   lastWinnerKey = d.lastWinnerKey || null;
 
-  inputsScore.forEach(i => {
+  allScoreInputs().forEach(i => {
     const k = i.dataset.t + i.dataset.r;
     if (d[k] !== undefined) i.value = d[k];
+    if (i.dataset.t === "w" || i.dataset.t === "z"){
+      i.dataset.pbonus = d[k + "_pbonus"] || "0";
+      i.dataset.prevNorm = d[k + "_prev"] || normalizeSpecial(i.value);
+    }
   });
+}
 
-  updateNames();
-  updateTotalsAndUI();
-  loadHistory();
+/* ---------------- History + PDF + delete ---------------- */
+function loadHistory(){ return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); }
+function saveHistory(arr){ localStorage.setItem(HIST_KEY, JSON.stringify(arr)); }
+
+function buildHistoryEntryFromCurrentGame(){
+  const tw = parseInt(puntenWij.textContent,10) || 0;
+  const tz = parseInt(puntenZij.textContent,10) || 0;
+  const rw = parseInt(roemWij.textContent,10) || 0;
+  const rz = parseInt(roemZij.textContent,10) || 0;
+
+  const nWij = parseInt(document.body.dataset.nWij || "0",10);
+  const nZij = parseInt(document.body.dataset.nZij || "0",10);
+  const pWij = parseInt(document.body.dataset.pWij || "0",10);
+  const pZij = parseInt(document.body.dataset.pZij || "0",10);
+
+  const rounds = [];
+  for (let i=1; i<=ROUNDS; i++){
+    rounds.push({ r:i, w:q("w",i).value, rw:q("rw",i).value, z:q("z",i).value, rz:q("rz",i).value });
+  }
+
+  const wijTeam = teamWijNaam();
+  const zijTeam = teamZijNaam();
+  const winnerTeam = ((tw+rw) > (tz+rz)) ? wijTeam : zijTeam;
+
+  return {
+    id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2),
+    createdAt: nowISO(),
+    startedAt: gameStartedAt,
+    endedAt: gameEndedAt,
+    wijTeam, zijTeam,
+    pointsWij: tw, pointsZij: tz,
+    roemWij: rw, roemZij: rz,
+    totalWij: tw+rw, totalZij: tz+rz,
+    nWij, nZij, pWij, pZij,
+    winnerText: `🏆 Winnaar: ${winnerTeam} 🏆`,
+    rounds
+  };
 }
 
 function nieuwPotje(){
-  if (winner.textContent) {
-    const hist = JSON.parse(localStorage.getItem("history") || "[]");
-    hist.unshift(winner.textContent);
-    localStorage.setItem("history", JSON.stringify(hist));
+  if (winner.textContent && gameStartedAt && gameEndedAt) {
+    const entry = buildHistoryEntryFromCurrentGame();
+    const hist = loadHistory();
+    hist.unshift(entry);
+    saveHistory(hist);
   }
-  localStorage.removeItem("game");
+  localStorage.removeItem(GAME_KEY);
   location.reload();
 }
 
-function loadHistory(){
-  const hist = JSON.parse(localStorage.getItem("history") || "[]");
-  history.innerHTML = "";
-  hist.forEach(h => {
-    const div = document.createElement("div");
-    div.textContent = h;
-    history.appendChild(div);
-  });
+function printGameAsPDF(entry){
+  const w = window.open("", "_blank");
+  if (!w) return;
+
+  const rowsHtml = entry.rounds.map(r => `
+    <tr>
+      <td>${r.r}</td>
+      <td>${escapeHTML(r.w)}</td>
+      <td>${escapeHTML(r.rw || "")}</td>
+      <td>${escapeHTML(r.z)}</td>
+      <td>${escapeHTML(r.rz || "")}</td>
+    </tr>
+  `).join("");
+
+  const html = `
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>René’s Telraam - PDF</title>
+<style>
+  body{ font-family: Arial, sans-serif; margin: 24px; color:#111; }
+  h1{ margin:0 0 8px; }
+  .meta{ margin: 8px 0 16px; }
+  .box{ border:1px solid #ddd; padding:12px; border-radius:10px; margin-bottom:14px; }
+  table{ width:100%; border-collapse:collapse; }
+  th,td{ border:1px solid #ddd; padding:6px; text-align:center; }
+  th{ background:#f3f3f3; }
+  .small{ font-size:12px; color:#333; }
+  @media print{ .noprint{ display:none; } }
+</style>
+</head>
+<body>
+  <div class="noprint" style="margin-bottom:12px;">
+    Tip: kies in het printmenu voor <b>“Bewaar als PDF”</b>.
+  </div>
+
+  <h1>René’s Telraam</h1>
+  <div class="meta small">
+    <b>${escapeHTML(entry.wijTeam)}</b> - <b>${escapeHTML(entry.zijTeam)}</b><br>
+    Datum: ${fmtDateTime(entry.startedAt).slice(0,10)}<br>
+    Begin: ${fmtDateTime(entry.startedAt)}<br>
+    Einde: ${fmtDateTime(entry.endedAt)}
+  </div>
+
+  <div class="box">
+    <b>Scores</b><br>
+    Punten: ${entry.pointsWij} - ${entry.pointsZij}<br>
+    Roem: ${entry.roemWij} - ${entry.roemZij}<br>
+    Totaal: ${entry.totalWij} - ${entry.totalZij}<br>
+    N: ${entry.nWij} - ${entry.nZij} &nbsp;|&nbsp; P: ${entry.pWij} - ${entry.pZij}<br><br>
+    ${escapeHTML(entry.winnerText)}
+  </div>
+
+  <div class="box">
+    <b>Rondes</b>
+    <table>
+      <thead>
+        <tr><th>R</th><th>Wij</th><th>Roem Wij</th><th>Zij</th><th>Roem Zij</th></tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>
+
+  <script>window.onload = () => window.print();</script>
+</body>
+</html>
+  `;
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }
 
+/* ---------------- Highscores ---------------- */
+function renderHighscores(hist){
+  const teamStats = new Map();
+  function addTeam(teamName, points, roem, nCount, pCount){
+    const key = teamName || "Onbekend";
+    if (!teamStats.has(key)) {
+      teamStats.set(key, { team:key, bestPoints:-Infinity, worstPoints:Infinity, bestRoem:-Infinity, nTotal:0, pTotal:0 });
+    }
+    const s = teamStats.get(key);
+    s.bestPoints = Math.max(s.bestPoints, points);
+    s.worstPoints = Math.min(s.worstPoints, points);
+    s.bestRoem = Math.max(s.bestRoem, roem);
+    s.nTotal += nCount;
+    s.pTotal += pCount;
+  }
+  hist.forEach(g => {
+    addTeam(g.wijTeam, g.pointsWij, g.roemWij, g.nWij, g.pWij);
+    addTeam(g.zijTeam, g.pointsZij, g.roemZij, g.nZij, g.pZij);
+  });
+
+  highscores.innerHTML = "";
+  const arr = Array.from(teamStats.values());
+  const top = (cmp) => arr.slice().sort(cmp)[0];
+
+  function card(title, content){
+    const d = document.createElement("div");
+    d.className = "badge";
+    d.innerHTML = `<div style="font-weight:900; margin-bottom:6px;">${title}</div><div>${content}</div>`;
+    highscores.appendChild(d);
+  }
+
+  if (!hist.length){
+    card("Nog geen highscores", "Speel een potje en druk daarna op <b>Nieuw potje</b> om het op te slaan.");
+    return;
+  }
+
+  const bestPoints = top((a,b)=>b.bestPoints - a.bestPoints);
+  const worstPoints = top((a,b)=>a.worstPoints - b.worstPoints);
+  const bestRoem = top((a,b)=>b.bestRoem - a.bestRoem);
+  const mostN = top((a,b)=>b.nTotal - a.nTotal);
+  const mostP = top((a,b)=>b.pTotal - a.pTotal);
+
+  card("Hoogste punten (zonder roem)", `<b>${escapeHTML(bestPoints.team)}</b><br>${bestPoints.bestPoints} punten`);
+  card("Laagste punten (zonder roem)", `<b>${escapeHTML(worstPoints.team)}</b><br>${worstPoints.worstPoints} punten`);
+  card("Meeste roem", `<b>${escapeHTML(bestRoem.team)}</b><br>${bestRoem.bestRoem} roem`);
+  card("Meeste keer N", `<b>${escapeHTML(mostN.team)}</b><br>${mostN.nTotal}× N`);
+  card("Meeste keer P", `<b>${escapeHTML(mostP.team)}</b><br>${mostP.pTotal}× P`);
+}
+
+/* ---------------- Render history ---------------- */
+function renderHistoryAndHighscores(){
+  const hist = loadHistory();
+  history.innerHTML = "";
+
+  hist.forEach(entry => {
+    const div = document.createElement("div");
+    div.className = "histItem";
+
+    const meta = document.createElement("div");
+    meta.className = "histMeta";
+    meta.innerHTML = `
+      <div style="font-weight:900;">${escapeHTML(entry.wijTeam)} - ${escapeHTML(entry.zijTeam)}</div>
+      <div style="opacity:.85; margin-top:2px;">
+        Start: ${fmtDateTime(entry.startedAt)}<br>
+        Eind: ${fmtDateTime(entry.endedAt)}
+      </div>
+      <div style="margin-top:6px;">
+        Punten: <b>${entry.pointsWij}</b> - <b>${entry.pointsZij}</b> |
+        Roem: <b>${entry.roemWij}</b> - <b>${entry.roemZij}</b> |
+        Totaal: <b>${entry.totalWij}</b> - <b>${entry.totalZij}</b>
+      </div>
+      <div style="margin-top:4px; opacity:.9;">
+        N: ${entry.nWij} - ${entry.nZij} &nbsp;|&nbsp; P: ${entry.pWij} - ${entry.pZij}
+      </div>
+      <div style="margin-top:6px;">${escapeHTML(entry.winnerText)}</div>
+    `;
+
+    const btns = document.createElement("div");
+    btns.className = "histBtns";
+
+    const pdfBtn = document.createElement("button");
+    pdfBtn.textContent = "📄 PDF";
+    pdfBtn.onclick = () => printGameAsPDF(entry);
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑️ Verwijder";
+    delBtn.onclick = () => {
+      const next = loadHistory().filter(x => x.id !== entry.id);
+      saveHistory(next);
+      renderHistoryAndHighscores();
+    };
+
+    btns.appendChild(pdfBtn);
+    btns.appendChild(delBtn);
+
+    div.appendChild(meta);
+    div.appendChild(btns);
+    history.appendChild(div);
+  });
+
+  renderHighscores(hist);
+}
+
+/* ---------------- Confetti ---------------- */
 function confetti(){
   const c = document.getElementById("confetti");
   const ctx = c.getContext("2d");
-  c.width = innerWidth;
-  c.height = innerHeight;
+  c.width = innerWidth; c.height = innerHeight;
 
   const p = Array.from({length: 220}, () => ({
     x: Math.random() * c.width,
@@ -472,10 +826,221 @@ function confetti(){
     });
   }, 30);
 
-  setTimeout(() => clearInterval(t), 3500);
+  setTimeout(() => clearInterval(t), 2800);
 }
 
-load();
+/* ---------------- Core logic ---------------- */
+function q(t,r){ return document.querySelector(`[data-t="${t}"][data-r="${r}"]`); }
+
+function normalizeSpecial(v){
+  const s = (v || "").trim();
+  if (!s) return "";
+  const c = s[0];
+  if (c === "n" || c === "N") return "N";
+  if (c === "p" || c === "P") return "P";
+  return s;
+}
+function isNumericLike(s){
+  if (s === "" || s == null) return false;
+  return !isNaN(String(s).trim());
+}
+function pointsValueFromDisplay(s){
+  const v = normalizeSpecial(s);
+  if (v === "N" || v === "P") return 0;
+  if (isNumericLike(v)) return Math.max(0, Math.min(TOTAL, parseInt(v,10)));
+  return null;
+}
+function roemFieldFor(team, round){
+  return (team === "w") ? q("rw", round) : q("rz", round);
+}
+function setPBonus(team, round, apply){
+  const ptsEl = q(team, round);
+  const roemEl = roemFieldFor(team, round);
+  const had = ptsEl.dataset.pbonus === "1";
+
+  if (apply && !had){
+    const current = parseInt(roemEl.value,10) || 0;
+    roemEl.value = String(current + 100);
+    ptsEl.dataset.pbonus = "1";
+  }
+  if (!apply && had){
+    const current = parseInt(roemEl.value,10) || 0;
+    roemEl.value = String(Math.max(0, current - 100));
+    ptsEl.dataset.pbonus = "0";
+  }
+}
+
+let suppress = false;
+
+function onScoreInput(e){
+  if (suppress) return;
+
+  if (!gameStartedAt) { gameStartedAt = nowISO(); gameEndedAt = null; }
+
+  const el = e.target;
+  const t = el.dataset.t;
+  const r = parseInt(el.dataset.r, 10);
+
+  if (t === "rw" || t === "rz"){
+    updateTotalsAndUI();
+    saveGame();
+    return;
+  }
+
+  if (t !== "w" && t !== "z") return;
+
+  const prevNorm = el.dataset.prevNorm || "";
+  const valNorm = normalizeSpecial(el.value);
+  const otherT = (t === "w") ? "z" : "w";
+  const otherEl = q(otherT, r);
+
+  suppress = true;
+
+  if (valNorm === "") {
+    otherEl.value = "";
+  } else if (valNorm === "N" || valNorm === "P") {
+    el.value = valNorm;
+    otherEl.value = String(TOTAL);
+  } else if (isNumericLike(valNorm)) {
+    const num = Math.max(0, Math.min(TOTAL, parseInt(valNorm,10)));
+    el.value = String(num);
+    otherEl.value = String(TOTAL - num);
+  } else {
+    otherEl.value = "";
+  }
+
+  if (prevNorm === "P" && valNorm !== "P") setPBonus(t, r, false);
+  if (prevNorm !== "P" && valNorm === "P") setPBonus(t, r, true);
+
+  el.dataset.prevNorm = valNorm;
+
+  suppress = false;
+
+  updateTotalsAndUI();
+  saveGame();
+}
+
+function showWinnerOnce(w, z){
+  const name = (w > z) ? teamWijNaam() : teamZijNaam();
+  const key = `${w}|${z}|${name}`;
+  winner.textContent = `🏆 Winnaar: ${name} 🏆`;
+  if (lastWinnerKey !== key) { lastWinnerKey = key; confetti(); }
+}
+
+function updateTotalsAndUI(){
+  let tw=0, tz=0, rw=0, rz=0;
+  let ingevuld = true;
+
+  let nWij=0, nZij=0, pWij=0, pZij=0;
+
+  for (let i=1; i<=ROUNDS; i++){
+    const wDisp = q("w",i).value.trim();
+    const zDisp = q("z",i).value.trim();
+
+    const wNorm = normalizeSpecial(wDisp);
+    const zNorm = normalizeSpecial(zDisp);
+
+    if (wNorm === "N") nWij++;
+    if (zNorm === "N") nZij++;
+    if (wNorm === "P") pWij++;
+    if (zNorm === "P") pZij++;
+
+    const wPts = pointsValueFromDisplay(wDisp);
+    const zPts = pointsValueFromDisplay(zDisp);
+
+    if (wPts === null || zPts === null) ingevuld = false;
+
+    tw += (wPts ?? 0);
+    tz += (zPts ?? 0);
+
+    rw += parseInt(q("rw",i).value,10) || 0;
+    rz += parseInt(q("rz",i).value,10) || 0;
+  }
+
+  const totaalWij = tw + rw;
+  const totaalZij = tz + rz;
+
+  puntenWij.textContent = tw;
+  puntenZij.textContent = tz;
+  roemWij.textContent = rw;
+  roemZij.textContent = rz;
+  totalWij.textContent = totaalWij;
+  totalZij.textContent = totaalZij;
+
+  pointsLineSticky.textContent = `${tw} - ${tz}`;
+
+  if (ingevuld) {
+    if (!gameEndedAt) gameEndedAt = nowISO();
+    showWinnerOnce(totaalWij, totaalZij);
+  } else {
+    winner.textContent = "";
+    lastWinnerKey = null;
+    gameEndedAt = null;
+  }
+
+  document.body.dataset.nWij = String(nWij);
+  document.body.dataset.nZij = String(nZij);
+  document.body.dataset.pWij = String(pWij);
+  document.body.dataset.pZij = String(pZij);
+}
+
+/* ---------------- Save/load ---------------- */
+function saveGame(){
+  const d = {
+    w1:w1.value, w2:w2.value, z1:z1.value, z2:z2.value,
+    gameStartedAt, gameEndedAt, lastWinnerKey
+  };
+  document.querySelectorAll('input[data-t]').forEach(i => {
+    const k = i.dataset.t + i.dataset.r;
+    d[k] = i.value;
+    if (i.dataset.t === "w" || i.dataset.t === "z"){
+      d[k + "_pbonus"] = i.dataset.pbonus || "0";
+      d[k + "_prev"] = i.dataset.prevNorm || normalizeSpecial(i.value);
+    }
+  });
+  localStorage.setItem(GAME_KEY, JSON.stringify(d));
+}
+
+function loadGame(){
+  const d = JSON.parse(localStorage.getItem(GAME_KEY) || "{}");
+  w1.value = d.w1 || "";
+  w2.value = d.w2 || "";
+  z1.value = d.z1 || "";
+  z2.value = d.z2 || "";
+  gameStartedAt = d.gameStartedAt || null;
+  gameEndedAt = d.gameEndedAt || null;
+  lastWinnerKey = d.lastWinnerKey || null;
+
+  document.querySelectorAll('input[data-t]').forEach(i => {
+    const k = i.dataset.t + i.dataset.r;
+    if (d[k] !== undefined) i.value = d[k];
+    if (i.dataset.t === "w" || i.dataset.t === "z"){
+      i.dataset.pbonus = d[k + "_pbonus"] || "0";
+      i.dataset.prevNorm = d[k + "_prev"] || normalizeSpecial(i.value);
+    }
+  });
+}
+
+/* ---------------- Boot ---------------- */
+function init(){
+  // event handlers
+  document.querySelectorAll('input[data-t]').forEach(inp => inp.addEventListener("input", onScoreInput));
+  [w1,w2,z1,z2].forEach(i => i.addEventListener("input", () => { updateNames(); saveGame(); }));
+
+  // Enter = blur
+  document.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+    });
+  });
+
+  loadGame();
+  updateNames();
+  updateTotalsAndUI();
+  renderHistoryAndHighscores();
+}
+
+init();
 </script>
 </body>
 </html>

@@ -1,1023 +1,418 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8">
-<title>René’s Telraam</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>René’s Telraam</title>
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#d32f2f">
+  <meta name="theme-color" content="#d32f2f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Telraam" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Telraam">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="icon-512.png" />
+  <link rel="apple-touch-icon" href="icon-512.png" />
 
-<link rel="icon" href="logo.png">
-<link rel="apple-touch-icon" href="logo.png">
+  <!-- Manifest als data-uri, maar met echte icon bestanden -->
+  <link rel="manifest" href='data:application/json,{
+    "name":"René’s Telraam",
+    "short_name":"Telraam",
+    "start_url":".",
+    "display":"standalone",
+    "background_color":"#121212",
+    "theme_color":"#d32f2f",
+    "icons":[
+      {"src":"icon-512.png","sizes":"512x512","type":"image/png"},
+      {"src":"logo.png","sizes":"192x192","type":"image/png"}
+    ]
+  }'>
 
-<link rel="manifest" href='data:application/json,{
-  "name":"René’s Telraam",
-  "short_name":"Telraam",
-  "start_url":".",
-  "display":"standalone",
-  "background_color":"#121212",
-  "theme_color":"#d32f2f",
-  "icons":[
-    {"src":"logo.png","sizes":"192x192","type":"image/png"},
-    {"src":"logo.png","sizes":"512x512","type":"image/png"}
-  ]
-}'>
+  <style>
+    :root{
+      --bg:#f2f2f2; --card:#fff; --text:#000; --accent:#d32f2f;
+      --wij:#cfe9ff; --wijRoem:#a9d4ff;
+      --zij:#d6f7d6; --zijRoem:#b8efb8;
+      --line:rgba(0,0,0,.15);
+      --shadow:0 2px 8px rgba(0,0,0,.18);
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#121212; --card:#1e1e1e; --text:#fff;
+        --wij:#2a4b63; --wijRoem:#1f3c52;
+        --zij:#2a5a3a; --zijRoem:#224b31;
+        --line:rgba(255,255,255,.12);
+        --shadow:0 2px 10px rgba(0,0,0,.45);
+      }
+    }
 
-<style>
-:root{
-  --bg:#f2f2f2; --card:#fff; --text:#000; --accent:#d32f2f;
-  --wij:#cfe9ff; --wijRoem:#a9d4ff;
-  --zij:#d6f7d6; --zijRoem:#b8efb8;
-  --line:rgba(0,0,0,.15);
-  --shadow:0 2px 8px rgba(0,0,0,.18);
-}
-@media (prefers-color-scheme: dark){
-  :root{
-    --bg:#121212; --card:#1e1e1e; --text:#fff;
-    --wij:#2a4b63; --wijRoem:#1f3c52;
-    --zij:#2a5a3a; --zijRoem:#224b31;
-    --line:rgba(255,255,255,.12);
-    --shadow:0 2px 10px rgba(0,0,0,.45);
-  }
-}
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      margin:0;
+      padding:10px;
+      padding-bottom:100px;
+      -webkit-tap-highlight-color:transparent;
+      overscroll-behavior:none;
+    }
 
-*{box-sizing:border-box;}
-html,body{height:100%;}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  margin:0;
-  padding:10px;
-  -webkit-tap-highlight-color:transparent;
-  overscroll-behavior:none;
-  padding-bottom:86px; /* ruimte voor N/P balk */
-}
+    .stickyHeader{
+      position:sticky; top:0; z-index:50;
+      background:rgba(0,0,0,0);
+      backdrop-filter:saturate(180%) blur(10px);
+      padding:8px 8px 10px;
+      margin:-10px -10px 10px;
+      border-bottom:1px solid var(--line);
+    }
+    .headerCard{
+      display:flex; align-items:center; gap:10px;
+      padding:10px; margin:0 10px;
+      background:var(--card);
+      border-radius:14px;
+      box-shadow:var(--shadow);
+    }
+    .headerLogo{
+      width:92px; height:54px;
+      border-radius:14px;
+      object-fit:contain;
+      background:rgba(0,0,0,.04);
+    }
+    @media (prefers-color-scheme: dark){
+      .headerLogo{ background:rgba(255,255,255,.06); }
+    }
+    .headerText{flex:1; min-width:0;}
+    .headerLine1{
+      font-weight:900; font-size:14px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .headerLine2{ margin-top:2px; font-weight:900; font-size:18px; }
 
-/* Sticky header */
-.stickyHeader{
-  position:sticky;
-  top:0;
-  z-index:50;
-  background:rgba(0,0,0,0);
-  backdrop-filter:saturate(180%) blur(10px);
-  padding:8px 8px 10px;
-  margin:-10px -10px 10px;
-  border-bottom:1px solid var(--line);
-}
-.headerCard{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:10px;
-  margin:0 10px;
-  background:var(--card);
-  border-radius:14px;
-  box-shadow:var(--shadow);
-}
-.headerLogo{
-  width:86px;              /* breder */
-  height:54px;
-  border-radius:14px;
-  object-fit:contain;      /* niet afsnijden */
-  background:rgba(0,0,0,.04);
-}
-@media (prefers-color-scheme: dark){
-  .headerLogo{ background:rgba(255,255,255,.06); }
-}
-.headerText{flex:1; min-width:0;}
-.headerLine1{
-  font-weight:900;
-  font-size:14px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.headerLine2{
-  margin-top:2px;
-  font-weight:900;
-  font-size:18px;
-}
-.installMini{
-  width:auto;
-  margin:0;
-  padding:10px 12px;
-  font-size:14px;
-  border-radius:12px;
-  display:none;
-}
+    .installMini{
+      width:auto; margin:0;
+      padding:10px 12px;
+      font-size:14px;
+      border-radius:12px;
+      border:none;
+      background:var(--accent);
+      color:#fff;
+      display:none;
+    }
 
-.card{
-  background:var(--card);
-  border-radius:14px;
-  padding:12px;
-  margin-bottom:10px;
-  box-shadow:var(--shadow);
-}
+    .card{
+      background:var(--card);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:10px;
+      box-shadow:var(--shadow);
+    }
 
-table{width:100%; border-collapse:collapse;}
-th,td{padding:6px; text-align:center; vertical-align:middle;}
+    table{width:100%; border-collapse:collapse;}
+    th,td{padding:6px; text-align:center; vertical-align:middle;}
 
-.smallNote{font-size:12px; opacity:.82; margin-top:8px;}
+    .smallNote{font-size:12px; opacity:.82; margin-top:8px;}
 
-input{
-  font-size:16px;     /* voorkomt iOS zoom */
-  width:54px;
-  padding:8px 10px;
-  text-align:center;
-  border-radius:999px;
-  border:1px solid rgba(0,0,0,.25);
-  outline:none;
-}
-@media (prefers-color-scheme: dark){
-  input{ border:1px solid rgba(255,255,255,.18); }
-}
-input:focus{ box-shadow:0 0 0 3px rgba(211,47,47,.25); }
+    input{
+      font-size:16px; /* voorkomt iOS zoom */
+      width:56px;
+      padding:8px 10px;
+      text-align:center;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.25);
+      outline:none;
+    }
+    @media (prefers-color-scheme: dark){
+      input{ border:1px solid rgba(255,255,255,.18); }
+    }
+    input:focus{ box-shadow:0 0 0 3px rgba(211,47,47,.25); }
 
-.nameInput{
-  width: calc(50% - 8px);
-  max-width: 320px;
-  min-width: 220px;
-  text-align:left;
-  padding-left:14px;
-}
-@media (max-width:420px){
-  .nameInput{ width: 100%; max-width: none; }
-}
+    .nameInput{
+      width: calc(50% - 8px);
+      max-width: 360px;
+      min-width: 240px;
+      text-align:left;
+      padding-left:14px;
+    }
+    @media (max-width:420px){
+      .nameInput{ width: 100%; max-width:none; min-width:0; }
+    }
 
-.inp-wij{ background:var(--wij); }
-.inp-wijroem{ background:var(--wijRoem); }
-.inp-zij{ background:var(--zij); }
-.inp-zijroem{ background:var(--zijRoem); }
+    .inp-wij{ background:var(--wij); }
+    .inp-wijroem{ background:var(--wijRoem); }
+    .inp-zij{ background:var(--zij); }
+    .inp-zijroem{ background:var(--zijRoem); }
 
-.sepRow td{ padding:0; height:10px; }
-.sepLine{ width:100%; height:1px; background:var(--line); }
+    .sepRow td{ padding:0; height:10px; }
+    .sepLine{ width:100%; height:1px; background:var(--line); }
 
-button{
-  width:100%;
-  padding:12px;
-  font-size:16px;
-  border-radius:12px;
-  border:none;
-  background:var(--accent);
-  color:#fff;
-  margin-top:6px;
-}
+    button.primary{
+      width:100%;
+      padding:12px;
+      font-size:16px;
+      border-radius:12px;
+      border:none;
+      background:var(--accent);
+      color:#fff;
+      margin-top:6px;
+    }
 
-#winner{
-  font-size:36px;
-  text-align:center;
-  color:gold;
-  margin:10px 0;
-}
+    #winner{
+      font-size:36px;
+      text-align:center;
+      color:gold;
+      margin:10px 0;
+    }
 
-.grid2{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:10px;
-}
-@media (max-width:520px){ .grid2{ grid-template-columns:1fr; } }
-.badge{
-  border:1px solid var(--line);
-  border-radius:12px;
-  padding:10px;
-}
+    .colTotals{
+      font-weight:900;
+      border-top:1px solid var(--line);
+    }
+    .bigTotals{
+      font-size:22px;
+      font-weight:900;
+    }
+    .bigTotals td, .bigTotals th{ padding-top:10px; padding-bottom:10px; }
 
-#history .histItem{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:10px;
-  padding:10px 0;
-  border-bottom:1px solid var(--line);
-}
-#history .histMeta{ flex:1; }
-#history .histBtns{ display:flex; gap:8px; flex-wrap:wrap; }
-#history .histBtns button{
-  width:auto; padding:10px 12px; font-size:14px; border-radius:10px;
-}
+    #toast{
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:96px;
+      background:rgba(0,0,0,.85);
+      color:#fff;
+      padding:12px 14px;
+      border-radius:14px;
+      font-weight:800;
+      max-width:min(560px, calc(100% - 20px));
+      text-align:center;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .2s ease;
+      z-index:9999;
+    }
+    #toast.show{opacity:1;}
+    .inputError{
+      border-color:#ff3b30 !important;
+      box-shadow:0 0 0 3px rgba(255,59,48,.22) !important;
+    }
 
-canvas{ position:fixed; top:0; left:0; pointer-events:none; }
+    #npBar{
+      position:fixed;
+      left:10px; right:10px;
+      bottom:10px; /* JS schuift hem boven toetsenbord */
+      z-index:9998;
+      background:var(--card);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      border-radius:16px;
+      padding:10px;
+      display:none;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+    #npBar .row{ display:flex; gap:10px; align-items:center; }
+    #npBar .hint{
+      flex:1; font-weight:900; opacity:.85;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    #npBar button{
+      width:auto;
+      padding:10px 14px;
+      border-radius:14px;
+      font-weight:900;
+      font-size:16px;
+      border:none;
+      background:var(--accent);
+      color:#fff;
+    }
+    #npBar button.secondary{
+      background:transparent;
+      color:var(--text);
+      border:1px solid var(--line);
+    }
 
-/* foutmelding */
-#toast{
-  position:fixed;
-  left:50%;
-  bottom:88px; /* boven N/P balk */
-  transform:translateX(-50%);
-  background:rgba(0,0,0,.85);
-  color:#fff;
-  padding:12px 14px;
-  border-radius:14px;
-  font-weight:800;
-  max-width:min(560px, calc(100% - 20px));
-  text-align:center;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .2s ease;
-  z-index:9999;
-}
-#toast.show{opacity:1;}
-.inputError{
-  border-color:#ff3b30 !important;
-  box-shadow:0 0 0 3px rgba(255,59,48,.22) !important;
-}
+    #pdfOverlay{
+      display:none;
+      position:fixed;
+      inset:0;
+      z-index:10000;
+      background:var(--bg);
+    }
+    #pdfTopbar{
+      position:sticky; top:0; z-index:10001;
+      background:var(--card);
+      border-bottom:1px solid var(--line);
+      padding:10px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    #pdfTopbar button{
+      width:auto;
+      padding:10px 12px;
+      border-radius:12px;
+      border:none;
+      background:var(--accent);
+      color:#fff;
+      font-weight:900;
+    }
+    #pdfTopbar button.secondary{
+      background:transparent;
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+    #pdfTitle{
+      font-weight:900;
+      flex:1;
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+    }
+    #pdfFrame{
+      width:100%;
+      height:calc(100% - 56px);
+      border:0;
+      background:#fff;
+    }
 
-/* totals */
-.colTotals{
-  font-weight:900;
-  border-top:1px solid var(--line);
-}
-.bigTotals{
-  font-size:20px;
-  font-weight:900;
-}
-.bigTotals td, .bigTotals th{ padding-top:10px; padding-bottom:10px; }
+    .grid2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width:520px){ .grid2{ grid-template-columns:1fr; } }
+    .badge{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+    }
 
-/* N/P balk */
-#npBar{
-  position:fixed;
-  left:10px;
-  right:10px;
-  bottom:10px;
-  z-index:9998;
-  background:var(--card);
-  border:1px solid var(--line);
-  box-shadow:var(--shadow);
-  border-radius:16px;
-  padding:10px;
-  display:none;
-}
-#npBar .row{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-#npBar .hint{
-  flex:1;
-  font-weight:800;
-  opacity:.85;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-#npBar .mini{
-  width:auto;
-  padding:10px 14px;
-  border-radius:14px;
-  font-weight:900;
-  font-size:16px;
-}
-#npBar .mini.secondary{
-  background:transparent;
-  color:var(--text);
-  border:1px solid var(--line);
-}
-</style>
+    #history .histItem{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+      padding:10px 0;
+      border-bottom:1px solid var(--line);
+    }
+    #history .histMeta{ flex:1; }
+    #history .histBtns{ display:flex; gap:8px; flex-wrap:wrap; }
+    #history .histBtns button{
+      width:auto; padding:10px 12px; font-size:14px;
+      border-radius:10px; border:none; background:var(--accent); color:#fff;
+    }
+    #history .histBtns button.secondary{
+      background:transparent;
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+
+    canvas{ position:fixed; top:0; left:0; pointer-events:none; }
+
+    /* als JS faalt, tonen we dit */
+    #fatal{
+      display:none;
+      background:#ff3b30;
+      color:#fff;
+      padding:12px;
+      border-radius:14px;
+      font-weight:900;
+      margin-bottom:10px;
+    }
+  </style>
 </head>
 
 <body>
+  <div id="fatal"></div>
 
-<div class="stickyHeader">
-  <div class="headerCard">
-    <img src="logo.png" class="headerLogo" alt="logo">
-    <div class="headerText">
-      <div class="headerLine1" id="namesLineSticky">Wij - Zij</div>
-      <div class="headerLine2" id="pointsLineSticky">0 - 0</div>
+  <div class="stickyHeader">
+    <div class="headerCard">
+      <img src="logo.png" class="headerLogo" alt="logo">
+      <div class="headerText">
+        <div class="headerLine1" id="namesLineSticky">Wij - Zij</div>
+        <div class="headerLine2" id="pointsLineSticky">0 - 0</div>
+      </div>
+      <button id="installBtn" class="installMini">📲</button>
     </div>
-    <button id="installBtn" class="installMini">📲</button>
   </div>
-</div>
 
-<div class="card">
-  <b>Team Wij</b><br>
-  <input id="w1" class="nameInput" placeholder="Speler 1" autocomplete="off">
-  <input id="w2" class="nameInput" placeholder="Speler 2" autocomplete="off"><br><br>
-  <b>Team Zij</b><br>
-  <input id="z1" class="nameInput" placeholder="Speler 1" autocomplete="off">
-  <input id="z2" class="nameInput" placeholder="Speler 2" autocomplete="off">
-  <div class="smallNote">
-    Punten: typ een getal, of gebruik de knoppen <b>N</b>/<b>P</b> onderaan.
+  <div class="card">
+    <b>Team Wij</b><br>
+    <input id="w1" class="nameInput" placeholder="Speler 1" autocomplete="off">
+    <input id="w2" class="nameInput" placeholder="Speler 2" autocomplete="off"><br><br>
+    <b>Team Zij</b><br>
+    <input id="z1" class="nameInput" placeholder="Speler 1" autocomplete="off">
+    <input id="z2" class="nameInput" placeholder="Speler 2" autocomplete="off">
+    <div class="smallNote">Punten: typ een getal, of gebruik <b>Nat</b>/<b>Pit</b>.</div>
   </div>
-</div>
 
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>R</th>
-        <th id="tWij">Wij</th>
-        <th>Roem</th>
-        <th id="tZij">Zij</th>
-        <th>Roem</th>
-      </tr>
-    </thead>
-    <tbody id="rows"></tbody>
-    <tfoot>
-      <tr class="colTotals">
-        <th style="text-align:left;">Som</th>
-        <th><span id="puntenWij">0</span></th>
-        <th><span id="roemWij">0</span></th>
-        <th><span id="puntenZij">0</span></th>
-        <th><span id="roemZij">0</span></th>
-      </tr>
-      <tr class="bigTotals">
-        <th style="text-align:left;">Totaal</th>
-        <td colspan="2"><span id="totalWij">0</span></td>
-        <td colspan="2"><span id="totalZij">0</span></td>
-      </tr>
-    </tfoot>
-  </table>
-</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>R</th>
+          <th id="tWij">Wij</th>
+          <th>Roem</th>
+          <th id="tZij">Zij</th>
+          <th>Roem</th>
+        </tr>
+      </thead>
 
-<div id="winner"></div>
+      <tbody id="rows"></tbody>
 
-<button id="newGameBtn">Nieuw potje</button>
-
-<div class="card">
-  <h3 style="margin:0 0 10px;">Highscores</h3>
-  <div class="grid2" id="highscores"></div>
-</div>
-
-<div class="card">
-  <h3 style="margin:0 0 10px;">Historie</h3>
-  <div id="history"></div>
-</div>
-
-<div id="toast"></div>
-
-<div id="npBar">
-  <div class="row">
-    <div class="hint" id="npHint">Selecteer een puntenvakje…</div>
-    <button class="mini secondary" id="npClear">Leeg</button>
-    <button class="mini" id="npN">N</button>
-    <button class="mini" id="npP">P</button>
+      <tfoot>
+        <tr class="colTotals">
+          <th style="text-align:left;">Som</th>
+          <th><span id="puntenWij">0</span></th>
+          <th><span id="roemWij">0</span></th>
+          <th><span id="puntenZij">0</span></th>
+          <th><span id="roemZij">0</span></th>
+        </tr>
+        <tr class="bigTotals">
+          <th style="text-align:left;">Totaal</th>
+          <td colspan="2"><span id="totalWij">0</span></td>
+          <td colspan="2"><span id="totalZij">0</span></td>
+        </tr>
+      </tfoot>
+    </table>
   </div>
-</div>
 
-<canvas id="confetti"></canvas>
-
-<script>
-(function(){
-  // DOM
-  var installBtn = document.getElementById("installBtn");
-
-  var w1 = document.getElementById("w1");
-  var w2 = document.getElementById("w2");
-  var z1 = document.getElementById("z1");
-  var z2 = document.getElementById("z2");
-
-  var tWij = document.getElementById("tWij");
-  var tZij = document.getElementById("tZij");
-  var rows = document.getElementById("rows");
-
-  var namesLineSticky = document.getElementById("namesLineSticky");
-  var pointsLineSticky = document.getElementById("pointsLineSticky");
-
-  var puntenWijEl = document.getElementById("puntenWij");
-  var puntenZijEl = document.getElementById("puntenZij");
-  var roemWijEl = document.getElementById("roemWij");
-  var roemZijEl = document.getElementById("roemZij");
-  var totalWijEl = document.getElementById("totalWij");
-  var totalZijEl = document.getElementById("totalZij");
-
-  var winnerEl = document.getElementById("winner");
-  var newGameBtn = document.getElementById("newGameBtn");
-
-  var highscoresEl = document.getElementById("highscores");
-  var historyEl = document.getElementById("history");
-
-  var toastEl = document.getElementById("toast");
-
-  var npBar = document.getElementById("npBar");
-  var npHint = document.getElementById("npHint");
-  var npN = document.getElementById("npN");
-  var npP = document.getElementById("npP");
-  var npClear = document.getElementById("npClear");
-
-  var confettiCanvas = document.getElementById("confetti");
-  var confettiCtx = confettiCanvas.getContext("2d");
-
-  // PWA install
-  var deferredPrompt = null;
-  function isStandaloneMode(){
-    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
-  }
-  window.addEventListener("beforeinstallprompt", function(e){
-    e.preventDefault();
-    deferredPrompt = e;
-    if (!isStandaloneMode()) installBtn.style.display = "block";
-  });
-  installBtn.addEventListener("click", function(){ if (deferredPrompt) deferredPrompt.prompt(); });
-  if (isStandaloneMode()) installBtn.style.display = "none";
-
-  // Constants
-  var TOTAL = 162, ROUNDS = 16;
-  var GAME_KEY = "rene_telraam_game_v11";
-  var HIST_KEY = "rene_telraam_history_v2";
-
-  var suppress = false;
-  var lastWinnerKey = null;
-  var gameStartedAt = null;
-  var gameEndedAt = null;
-
-  var focusedPointsInput = null;
-
-  function showToast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add("show");
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(function(){
-      toastEl.classList.remove("show");
-    }, 2600);
-  }
-
-  function nowISO(){ return new Date().toISOString(); }
-  function pad(n){ n = String(n); return n.length<2 ? "0"+n : n; }
-  function fmtDateTime(iso){
-    var d = new Date(iso);
-    return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
-  }
-  function escapeHTML(s){
-    s = String(s == null ? "" : s);
-    return s.replace(/[&<>"']/g, function(c){
-      return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" })[c];
-    });
-  }
-
-  function teamWijNaam(){
-    var a = (w1.value || "Wij").trim();
-    var b = (w2.value || "").trim();
-    return b ? (a + " & " + b) : a;
-  }
-  function teamZijNaam(){
-    var a = (z1.value || "Zij").trim();
-    var b = (z2.value || "").trim();
-    return b ? (a + " & " + b) : a;
-  }
-  function updateNames(){
-    var wij = teamWijNaam();
-    var zij = teamZijNaam();
-    tWij.textContent = wij;
-    tZij.textContent = zij;
-    namesLineSticky.textContent = wij + " - " + zij;
-  }
-
-  function normalizeSpecial(v){
-    v = (v || "").trim();
-    if (!v) return "";
-    var c = v.charAt(0);
-    if (c === "n" || c === "N") return "N";
-    if (c === "p" || c === "P") return "P";
-    return v;
-  }
-  function isNumericLike(s){
-    if (s === "" || s == null) return false;
-    return !isNaN(String(s).trim());
-  }
-  function pointsValueFromDisplay(s){
-    var v = normalizeSpecial(s);
-    if (v === "N" || v === "P") return 0;
-    if (isNumericLike(v)){
-      var n = parseInt(v,10);
-      if (n < 0) n = 0;
-      if (n > TOTAL) n = TOTAL;
-      return n;
-    }
-    return null;
-  }
-
-  function q(t,r){
-    return document.querySelector('[data-t="'+t+'"][data-r="'+r+'"]');
-  }
-  function roemFieldFor(team, round){
-    return (team === "w") ? q("rw", round) : q("rz", round);
-  }
-  function setPBonus(team, round, apply){
-    var ptsEl = q(team, round);
-    var roemEl = roemFieldFor(team, round);
-    var had = (ptsEl.dataset.pbonus === "1");
-
-    if (apply && !had){
-      var current = parseInt(roemEl.value,10) || 0;
-      roemEl.value = String(current + 100);
-      ptsEl.dataset.pbonus = "1";
-    }
-    if (!apply && had){
-      var cur2 = parseInt(roemEl.value,10) || 0;
-      roemEl.value = String(Math.max(0, cur2 - 100));
-      ptsEl.dataset.pbonus = "0";
-    }
-  }
-
-  // Build rows + separators
-  for (var i=1; i<=ROUNDS; i++){
-    var tr = document.createElement("tr");
-    tr.innerHTML =
-      '<td>'+i+'</td>'+
-      '<td><input class="inp-wij" data-t="w" data-r="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="characters" spellcheck="false"></td>'+
-      '<td><input class="inp-wijroem" data-t="rw" data-r="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" spellcheck="false"></td>'+
-      '<td><input class="inp-zij" data-t="z" data-r="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="characters" spellcheck="false"></td>'+
-      '<td><input class="inp-zijroem" data-t="rz" data-r="'+i+'" type="text" inputmode="numeric" pattern="[0-9]*" autocapitalize="off" spellcheck="false"></td>';
-    rows.appendChild(tr);
-
-    if (i % 4 === 0 && i < 16){
-      var sep = document.createElement("tr");
-      sep.className = "sepRow";
-      sep.innerHTML = '<td colspan="5"><div class="sepLine"></div></td>';
-      rows.appendChild(sep);
-    }
-  }
-
-  // Enter = blur
-  document.addEventListener("keydown", function(e){
-    if (e.key === "Enter" && e.target && e.target.tagName === "INPUT"){
-      e.preventDefault();
-      e.target.blur();
-    }
-  });
-
-  function clearRoundError(r){
-    q("w",r).classList.remove("inputError");
-    q("z",r).classList.remove("inputError");
-  }
-  function setRoundError(r){
-    q("w",r).classList.add("inputError");
-    q("z",r).classList.add("inputError");
-  }
-  function validateNoEqualRound(r){
-    var wPts = pointsValueFromDisplay(q("w",r).value);
-    var zPts = pointsValueFromDisplay(q("z",r).value);
-    if (wPts === null || zPts === null) { clearRoundError(r); return true; }
-
-    if (wPts === 81 && zPts === 81){
-      var rw = parseInt(q("rw",r).value,10) || 0;
-      var rz = parseInt(q("rz",r).value,10) || 0;
-      if (rw === rz){
-        setRoundError(r);
-        showToast("Wakker worden! Je kunt niet evenveel punten krijgen in een ronde. 😊");
-        return false;
-      }
-    }
-    clearRoundError(r);
-    return true;
-  }
-
-  function confetti(){
-    confettiCanvas.width = innerWidth;
-    confettiCanvas.height = innerHeight;
-
-    var parts = [];
-    for (var i=0; i<220; i++){
-      parts.push({
-        x: Math.random() * confettiCanvas.width,
-        y: Math.random() * confettiCanvas.height,
-        r: Math.random() * 6 + 2,
-        vy: Math.random() * 2 + 2
-      });
-    }
-
-    var timer = setInterval(function(){
-      confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
-      for (var j=0; j<parts.length; j++){
-        var o = parts[j];
-        confettiCtx.beginPath();
-        confettiCtx.arc(o.x,o.y,o.r,0,Math.PI*2);
-        confettiCtx.fillStyle = "hsl(" + (Math.random()*360) + ",100%,50%)";
-        confettiCtx.fill();
-        o.y += o.vy;
-        if (o.y > confettiCanvas.height) o.y = 0;
-      }
-    }, 30);
-
-    setTimeout(function(){ clearInterval(timer); }, 2600);
-  }
-
-  function showWinnerOnce(w, z){
-    var name = (w > z) ? teamWijNaam() : teamZijNaam();
-    var key = String(w) + "|" + String(z) + "|" + name;
-    winnerEl.textContent = "🏆 Winnaar: " + name + " 🏆";
-    if (lastWinnerKey !== key){
-      lastWinnerKey = key;
-      confetti();
-    }
-  }
-
-  function updateTotalsAndUI(){
-    var tw=0, tz=0, rw=0, rz=0;
-    var ingevuld = true;
-    var anyInvalid = false;
-
-    var nWij=0, nZij=0, pWij=0, pZij=0;
-
-    for (var i=1; i<=ROUNDS; i++){
-      if (!validateNoEqualRound(i)) anyInvalid = true;
-
-      var wDisp = (q("w",i).value || "").trim();
-      var zDisp = (q("z",i).value || "").trim();
-
-      var wNorm = normalizeSpecial(wDisp);
-      var zNorm = normalizeSpecial(zDisp);
-
-      if (wNorm === "N") nWij++;
-      if (zNorm === "N") nZij++;
-      if (wNorm === "P") pWij++;
-      if (zNorm === "P") pZij++;
-
-      var wPts = pointsValueFromDisplay(wDisp);
-      var zPts = pointsValueFromDisplay(zDisp);
-
-      if (wPts === null || zPts === null) ingevuld = false;
-
-      tw += (wPts == null ? 0 : wPts);
-      tz += (zPts == null ? 0 : zPts);
-
-      rw += parseInt(q("rw",i).value,10) || 0;
-      rz += parseInt(q("rz",i).value,10) || 0;
-    }
-
-    var totaalWij = tw + rw;
-    var totaalZij = tz + rz;
-
-    puntenWijEl.textContent = tw;
-    puntenZijEl.textContent = tz;
-    roemWijEl.textContent = rw;
-    roemZijEl.textContent = rz;
-    totalWijEl.textContent = totaalWij;
-    totalZijEl.textContent = totaalZij;
-
-    pointsLineSticky.textContent = tw + " - " + tz;
-
-    if (ingevuld && !anyInvalid){
-      if (!gameEndedAt) gameEndedAt = nowISO();
-      showWinnerOnce(totaalWij, totaalZij);
-    } else {
-      winnerEl.textContent = "";
-      lastWinnerKey = null;
-      gameEndedAt = null;
-    }
-
-    document.body.dataset.nWij = String(nWij);
-    document.body.dataset.nZij = String(nZij);
-    document.body.dataset.pWij = String(pWij);
-    document.body.dataset.pZij = String(pZij);
-  }
-
-  function onScoreInput(e){
-    if (suppress) return;
-
-    if (!gameStartedAt){ gameStartedAt = nowISO(); gameEndedAt = null; }
-
-    var el = e.target;
-    var t = el.dataset.t;
-    var r = parseInt(el.dataset.r, 10);
-
-    if (t === "rw" || t === "rz"){
-      validateNoEqualRound(r);
-      updateTotalsAndUI();
-      saveGame();
-      return;
-    }
-    if (t !== "w" && t !== "z") return;
-
-    var prevNorm = el.dataset.prevNorm || "";
-    var valNorm = normalizeSpecial(el.value);
-
-    var otherT = (t === "w") ? "z" : "w";
-    var otherEl = q(otherT, r);
-
-    suppress = true;
-
-    if (valNorm === ""){
-      otherEl.value = "";
-    } else if (valNorm === "N" || valNorm === "P"){
-      el.value = valNorm;              // letter zichtbaar
-      otherEl.value = String(TOTAL);   // ander krijgt 162
-    } else if (isNumericLike(valNorm)){
-      var num = parseInt(valNorm,10);
-      if (num < 0) num = 0;
-      if (num > TOTAL) num = TOTAL;
-      el.value = String(num);
-      otherEl.value = String(TOTAL - num);
-    } else {
-      otherEl.value = "";
-    }
-
-    // P-bonus roem (+100)
-    if (prevNorm === "P" && valNorm !== "P") setPBonus(t, r, false);
-    if (prevNorm !== "P" && valNorm === "P") setPBonus(t, r, true);
-
-    el.dataset.prevNorm = valNorm;
-
-    suppress = false;
-
-    validateNoEqualRound(r);
-    updateTotalsAndUI();
-    saveGame();
-  }
-
-  function saveGame(){
-    var d = {
-      w1:w1.value, w2:w2.value, z1:z1.value, z2:z2.value,
-      gameStartedAt: gameStartedAt, gameEndedAt: gameEndedAt, lastWinnerKey: lastWinnerKey
-    };
-
-    var inputs = document.querySelectorAll('input[data-t]');
-    for (var i=0; i<inputs.length; i++){
-      var inp = inputs[i];
-      var k = inp.dataset.t + inp.dataset.r;
-      d[k] = inp.value;
-      if (inp.dataset.t === "w" || inp.dataset.t === "z"){
-        d[k + "_pbonus"] = inp.dataset.pbonus || "0";
-        d[k + "_prev"] = inp.dataset.prevNorm || normalizeSpecial(inp.value);
-      }
-    }
-
-    localStorage.setItem(GAME_KEY, JSON.stringify(d));
-  }
-
-  function loadGame(){
-    var d = JSON.parse(localStorage.getItem(GAME_KEY) || "{}");
-    w1.value = d.w1 || "";
-    w2.value = d.w2 || "";
-    z1.value = d.z1 || "";
-    z2.value = d.z2 || "";
-
-    gameStartedAt = d.gameStartedAt || null;
-    gameEndedAt = d.gameEndedAt || null;
-    lastWinnerKey = d.lastWinnerKey || null;
-
-    var inputs = document.querySelectorAll('input[data-t]');
-    for (var i=0; i<inputs.length; i++){
-      var inp = inputs[i];
-      var k = inp.dataset.t + inp.dataset.r;
-      if (d[k] !== undefined) inp.value = d[k];
-      if (inp.dataset.t === "w" || inp.dataset.t === "z"){
-        inp.dataset.pbonus = d[k + "_pbonus"] || "0";
-        inp.dataset.prevNorm = d[k + "_prev"] || normalizeSpecial(inp.value);
-      }
-    }
-  }
-
-  // History storage
-  function loadHistory(){ return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); }
-  function saveHistory(arr){ localStorage.setItem(HIST_KEY, JSON.stringify(arr)); }
-
-  function buildHistoryEntryFromCurrentGame(){
-    var tw = parseInt(puntenWijEl.textContent,10) || 0;
-    var tz = parseInt(puntenZijEl.textContent,10) || 0;
-    var rw = parseInt(roemWijEl.textContent,10) || 0;
-    var rz = parseInt(roemZijEl.textContent,10) || 0;
-
-    var nWij = parseInt(document.body.dataset.nWij || "0",10);
-    var nZij = parseInt(document.body.dataset.nZij || "0",10);
-    var pWij = parseInt(document.body.dataset.pWij || "0",10);
-    var pZij = parseInt(document.body.dataset.pZij || "0",10);
-
-    var rounds = [];
-    for (var i=1; i<=ROUNDS; i++){
-      rounds.push({ r:i, w:q("w",i).value, rw:q("rw",i).value, z:q("z",i).value, rz:q("rz",i).value });
-    }
-
-    var wijTeam = teamWijNaam();
-    var zijTeam = teamZijNaam();
-    var winnerTeam = ((tw+rw) > (tz+rz)) ? wijTeam : zijTeam;
-    var id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "_" + Math.random().toString(16).slice(2);
-
-    return {
-      id:id,
-      startedAt: gameStartedAt,
-      endedAt: gameEndedAt,
-      wijTeam: wijTeam,
-      zijTeam: zijTeam,
-      pointsWij: tw, pointsZij: tz,
-      roemWij: rw, roemZij: rz,
-      totalWij: tw+rw, totalZij: tz+rz,
-      nWij:nWij, nZij:nZij, pWij:pWij, pZij:pZij,
-      winnerText: "🏆 Winnaar: " + winnerTeam + " 🏆",
-      rounds: rounds
-    };
-  }
-
-  function printGameAsPDF(entry){
-    var w = window.open("", "_blank");
-    if (!w) return;
-
-    var rowsHtml = "";
-    for (var i=0; i<entry.rounds.length; i++){
-      var r = entry.rounds[i];
-      rowsHtml += "<tr><td>"+r.r+"</td><td>"+escapeHTML(r.w)+"</td><td>"+escapeHTML(r.rw||"")+"</td><td>"+escapeHTML(r.z)+"</td><td>"+escapeHTML(r.rz||"")+"</td></tr>";
-    }
-
-    var html =
-      "<!doctype html><html lang='nl'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"+
-      "<title>René’s Telraam - PDF</title><style>"+
-      "body{font-family:Arial,sans-serif;margin:24px;color:#111;}h1{margin:0 0 8px;}"+
-      ".box{border:1px solid #ddd;padding:12px;border-radius:10px;margin-bottom:14px;}"+
-      "table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:6px;text-align:center;}th{background:#f3f3f3}"+
-      ".small{font-size:12px;color:#333}@media print{.noprint{display:none}}"+
-      "</style></head><body>"+
-      "<div class='noprint' style='margin-bottom:12px;'>Tip: kies <b>“Bewaar als PDF”</b>.</div>"+
-      "<h1>René’s Telraam</h1>"+
-      "<div class='small'><b>"+escapeHTML(entry.wijTeam)+"</b> - <b>"+escapeHTML(entry.zijTeam)+"</b><br>"+
-      "Begin: "+fmtDateTime(entry.startedAt)+"<br>Einde: "+fmtDateTime(entry.endedAt)+"</div>"+
-      "<div class='box'><b>Scores</b><br>"+
-      "Punten: "+entry.pointsWij+" - "+entry.pointsZij+"<br>"+
-      "Roem: "+entry.roemWij+" - "+entry.roemZij+"<br>"+
-      "Totaal: "+entry.totalWij+" - "+entry.totalZij+"<br>"+
-      "N: "+entry.nWij+" - "+entry.nZij+" | P: "+entry.pWij+" - "+entry.pZij+"<br><br>"+
-      escapeHTML(entry.winnerText)+"</div>"+
-      "<div class='box'><b>Rondes</b><table><thead><tr><th>R</th><th>Wij</th><th>Roem Wij</th><th>Zij</th><th>Roem Zij</th></tr></thead>"+
-      "<tbody>"+rowsHtml+"</tbody></table></div>"+
-      "<script>window.onload=function(){window.print();};<\/script></body></html>";
-
-    w.document.open(); w.document.write(html); w.document.close();
-  }
-
-  function renderHighscores(hist){
-    highscoresEl.innerHTML = "";
-
-    function card(title, content){
-      var d = document.createElement("div");
-      d.className = "badge";
-      var tt = document.createElement("div");
-      tt.style.fontWeight = "900";
-      tt.style.marginBottom = "6px";
-      tt.textContent = title;
-      var cc = document.createElement("div");
-      cc.innerHTML = content;
-      d.appendChild(tt);
-      d.appendChild(cc);
-      highscoresEl.appendChild(d);
-    }
-
-    if (!hist.length){
-      card("Nog geen highscores", "Speel een potje en druk daarna op <b>Nieuw potje</b> om het op te slaan.");
-      return;
-    }
-
-    var teamStats = new Map();
-    function addTeam(teamName, points, roem, nCount, pCount){
-      var key = teamName || "Onbekend";
-      if (!teamStats.has(key)){
-        teamStats.set(key, { team:key, bestPoints:-Infinity, worstPoints:Infinity, bestRoem:-Infinity, nTotal:0, pTotal:0 });
-      }
-      var s = teamStats.get(key);
-      s.bestPoints = Math.max(s.bestPoints, points);
-      s.worstPoints = Math.min(s.worstPoints, points);
-      s.bestRoem = Math.max(s.bestRoem, roem);
-      s.nTotal += nCount;
-      s.pTotal += pCount;
-    }
-
-    for (var i=0; i<hist.length; i++){
-      var g = hist[i];
-      addTeam(g.wijTeam, g.pointsWij, g.roemWij, g.nWij, g.pWij);
-      addTeam(g.zijTeam, g.pointsZij, g.roemZij, g.nZij, g.pZij);
-    }
-
-    var arr = Array.from(teamStats.values());
-    function top(cmp){ return arr.slice().sort(cmp)[0]; }
-
-    var bestPoints = top(function(a,b){ return b.bestPoints - a.bestPoints; });
-    var worstPoints = top(function(a,b){ return a.worstPoints - b.worstPoints; });
-    var bestRoem = top(function(a,b){ return b.bestRoem - a.bestRoem; });
-    var mostN = top(function(a,b){ return b.nTotal - a.nTotal; });
-    var mostP = top(function(a,b){ return b.pTotal - a.pTotal; });
-
-    card("Hoogste punten (zonder roem)", "<b>"+escapeHTML(bestPoints.team)+"</b><br>"+bestPoints.bestPoints+" punten");
-    card("Laagste punten (zonder roem)", "<b>"+escapeHTML(worstPoints.team)+"</b><br>"+worstPoints.worstPoints+" punten");
-    card("Meeste roem", "<b>"+escapeHTML(bestRoem.team)+"</b><br>"+bestRoem.bestRoem+" roem");
-    card("Meeste keer N", "<b>"+escapeHTML(mostN.team)+"</b><br>"+mostN.nTotal+"× N");
-    card("Meeste keer P", "<b>"+escapeHTML(mostP.team)+"</b><br>"+mostP.pTotal+"× P");
-  }
-
-  function renderHistory(){
-    var hist = loadHistory();
-    historyEl.innerHTML = "";
-
-    for (var i=0; i<hist.length; i++){
-      (function(entry){
-        var item = document.createElement("div");
-        item.className = "histItem";
-
-        var meta = document.createElement("div");
-        meta.className = "histMeta";
-        meta.innerHTML =
-          "<div style='font-weight:900;'>"+escapeHTML(entry.wijTeam)+" - "+escapeHTML(entry.zijTeam)+"</div>"+
-          "<div style='opacity:.85; margin-top:2px;'>Start: "+fmtDateTime(entry.startedAt)+"<br>Eind: "+fmtDateTime(entry.endedAt)+"</div>"+
-          "<div style='margin-top:6px;'>Punten: <b>"+entry.pointsWij+"</b> - <b>"+entry.pointsZij+"</b> | Roem: <b>"+entry.roemWij+"</b> - <b>"+entry.roemZij+"</b> | Totaal: <b>"+entry.totalWij+"</b> - <b>"+entry.totalZij+"</b></div>"+
-          "<div style='margin-top:4px; opacity:.9;'>N: "+entry.nWij+" - "+entry.nZij+" | P: "+entry.pWij+" - "+entry.pZij+"</div>"+
-          "<div style='margin-top:6px;'>"+escapeHTML(entry.winnerText)+"</div>";
-
-        var btns = document.createElement("div");
-        btns.className = "histBtns";
-
-        var pdfBtn = document.createElement("button");
-        pdfBtn.textContent = "📄 PDF";
-        pdfBtn.onclick = function(){ printGameAsPDF(entry); };
-
-        var delBtn = document.createElement("button");
-        delBtn.textContent = "🗑️ Verwijder";
-        delBtn.onclick = function(){
-          var next = loadHistory().filter(function(x){ return x.id !== entry.id; });
-          saveHistory(next);
-          renderHistory();
-          renderHighscores(next);
-        };
-
-        btns.appendChild(pdfBtn);
-        btns.appendChild(delBtn);
-
-        item.appendChild(meta);
-        item.appendChild(btns);
-
-        historyEl.appendChild(item);
-      })(hist[i]);
-    }
-
-    renderHighscores(hist);
-  }
-
-  function newGame(){
-    // alleen opslaan als er echt een winnaar bekend is (en geen 81-81 fout)
-    var allValid = true;
-    for (var i=1; i<=ROUNDS; i++){
-      if (!validateNoEqualRound(i)) { allValid = false; break; }
-    }
-    if (winnerEl.textContent && gameStartedAt && gameEndedAt && allValid){
-      var entry = buildHistoryEntryFromCurrentGame();
-      var hist = loadHistory();
-      hist.unshift(entry);
-      saveHistory(hist);
-    }
-
-    localStorage.removeItem(GAME_KEY);
-    location.reload();
-  }
-
-  // N/P balk logic
-  function showNPBarFor(inp){
-    focusedPointsInput = inp;
-    npBar.style.display = "block";
-    var r = inp.dataset.r;
-    var t = inp.dataset.t === "w" ? "Wij" : "Zij";
-    npHint.textContent = "Ronde " + r + " • " + t + " punten";
-  }
-  function hideNPBarIfNeeded(){
-    setTimeout(function(){
-      // Als focus naar een ander puntenveld gaat, komt hij meteen weer terug.
-      // Als focus weg is, hide.
-      var active = document.activeElement;
-      if (!active || !active.dataset || (active.dataset.t !== "w" && active.dataset.t !== "z")){
-        focusedPointsInput = null;
-        npBar.style.display = "none";
-        npHint.textContent = "Selecteer een puntenvakje…";
-      }
-    }, 120);
-  }
-  function applyNP(value){
-    if (!focusedPointsInput) return;
-    focusedPointsInput.value = value;
-    // trigger input logic
-    focusedPointsInput.dispatchEvent(new Event("input", { bubbles:true }));
-    focusedPointsInput.focus();
-  }
-
-  npN.onclick = function(){ applyNP("N"); };
-  npP.onclick = function(){ applyNP("P"); };
-  npClear.onclick = function(){ applyNP(""); };
-
-  // Hook events
-  var inputs = document.querySelectorAll('input[data-t]');
-  for (var i=0; i<inputs.length; i++){
-    inputs[i].addEventListener("input", onScoreInput);
-
-    // puntenvelden: N/P bar
-    if (inputs[i].dataset.t === "w" || inputs[i].dataset.t === "z"){
-      inputs[i].addEventListener("focus", function(e){ showNPBarFor(e.target); });
-      inputs[i].addEventListener("blur", function(){ hideNPBarIfNeeded(); });
-    }
-  }
-
-  [w1,w2,z1,z2].forEach(function(inp){
-    inp.addEventListener("input", function(){ updateNames(); saveGame(); });
-  });
-
-  newGameBtn.addEventListener("click", newGame);
-
-  // Boot
-  loadGame();
-  updateNames();
-  updateTotalsAndUI();
-  renderHistory();
-
-})();
-</script>
-
+  <div id="winner"></div>
+  <button id="newGameBtn" class="primary">Nieuw potje</button>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px;">Highscores</h3>
+    <div class="grid2" id="highscores"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px;">Historie</h3>
+    <div id="history"></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <div id="npBar">
+    <div class="row">
+      <div class="hint" id="npHint">Selecteer een puntenvakje…</div>
+      <button class="secondary" id="npClear">Leeg</button>
+      <button id="npNat">Nat</button>
+      <button id="npPit">Pit</button>
+    </div>
+  </div>
+
+  <div id="pdfOverlay">
+    <div id="pdfTopbar">
+      <button id="pdfBack" class="secondary">← Terug</button>
+      <div id="pdfTitle">PDF</div>
+      <button id="pdfPrint">🖨️ Print</button>
+    </div>
+    <iframe id="pdfFrame"></iframe>
+  </div>
+
+  <canvas id="confetti"></canvas>
+
+  <!-- script helemaal onderaan -->
+  <script src="./app.js"></script>
 </body>
 </html>

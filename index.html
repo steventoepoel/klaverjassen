@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>René’s Telraam</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Voorkomt iOS-inzoom zoveel mogelijk + houdt layout stabiel -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 
 <link rel="icon" href="logo.png">
 
@@ -21,45 +23,121 @@
 }'>
 
 <style>
-:root {
+:root{
   --bg:#f2f2f2; --card:#fff; --text:#000; --accent:#d32f2f;
+
+  --wij:#cfe9ff;      /* lichtblauw */
+  --wijRoem:#a9d4ff;  /* iets donkerder */
+  --zij:#d6f7d6;      /* lichtgroen */
+  --zijRoem:#b8efb8;  /* iets donkerder */
 }
-@media (prefers-color-scheme: dark) {
-  :root {--bg:#121212; --card:#1e1e1e; --text:#fff;}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121212; --card:#1e1e1e; --text:#fff;
+    /* iets “dieper” in dark mode maar nog steeds duidelijk */
+    --wij:#2a4b63;
+    --wijRoem:#1f3c52;
+    --zij:#2a5a3a;
+    --zijRoem:#224b31;
+  }
 }
-body {
-  background:var(--bg); color:var(--text);
-  font-family:system-ui,sans-serif;
-  margin:0; padding:10px;
+
+*{box-sizing:border-box;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  margin:0;
+  padding:10px;
 }
-.logo {
+
+.logo{
   display:block;
   margin:10px auto 10px;
   max-width:180px;
 }
+
 .card{
   background:var(--card);
-  border-radius:12px;
-  padding:10px;
+  border-radius:14px;
+  padding:12px;
   margin-bottom:10px;
-  box-shadow:0 2px 6px rgba(0,0,0,.2);
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
 }
-table{width:100%;border-collapse:collapse;}
-th,td{padding:6px;text-align:center;}
-input{width:60px;text-align:center;border-radius:6px;border:1px solid #999;}
+
+table{width:100%; border-collapse:collapse;}
+th,td{padding:6px; text-align:center; vertical-align:middle;}
+
+.smallNote{
+  font-size:12px;
+  opacity:.8;
+}
+
+input{
+  /* Belangrijk: >=16px om iOS zoom te voorkomen */
+  font-size:16px;
+  width:52px;                 /* smaller */
+  padding:8px 10px;
+  text-align:center;
+  border-radius:999px;        /* extra rond */
+  border:1px solid rgba(0,0,0,.25);
+  outline:none;
+}
+
+@media (prefers-color-scheme: dark){
+  input{ border:1px solid rgba(255,255,255,.18); }
+}
+
+input:focus{
+  box-shadow:0 0 0 3px rgba(211,47,47,.25);
+}
+
+.inp-wij{ background:var(--wij); }
+.inp-wijroem{ background:var(--wijRoem); }
+.inp-zij{ background:var(--zij); }
+.inp-zijroem{ background:var(--zijRoem); }
+
 button{
-  width:100%; padding:12px; font-size:16px;
-  border-radius:10px; border:none;
-  background:var(--accent); color:white;
-  margin-top:5px;
+  width:100%;
+  padding:12px;
+  font-size:16px;
+  border-radius:12px;
+  border:none;
+  background:var(--accent);
+  color:#fff;
+  margin-top:6px;
 }
-#winner{font-size:36px;text-align:center;color:gold;margin:10px 0;}
-#verschil{font-size:22px;text-align:center;margin:8px 0;font-weight:bold;}
-#history div{padding:5px;border-bottom:1px solid #999;}
-canvas{position:fixed;top:0;left:0;pointer-events:none;}
+
 #installBtn{display:none;}
 
-#splash {
+#scoreCenter{
+  text-align:center;
+  font-weight:700;
+  margin:10px 0 6px;
+}
+#scoreCenter .line1{ font-size:18px; }
+#scoreCenter .line2{ font-size:18px; margin-top:4px; }
+
+#winner{
+  font-size:36px;
+  text-align:center;
+  color:gold;
+  margin:10px 0;
+}
+
+#history div{
+  padding:6px 4px;
+  border-bottom:1px solid rgba(127,127,127,.35);
+}
+
+canvas{
+  position:fixed;
+  top:0; left:0;
+  pointer-events:none;
+}
+
+/* Splashscreen */
+#splash{
   position:fixed;
   inset:0;
   background:var(--bg);
@@ -69,210 +147,335 @@ canvas{position:fixed;top:0;left:0;pointer-events:none;}
   align-items:center;
   z-index:9999;
 }
-#splash img {width:180px;}
-#splash h2 {margin-top:10px;color:var(--accent);}
+#splash img{ width:180px; }
+#splash h2{ margin:10px 0 0; color:var(--accent); }
 </style>
 </head>
+
 <body>
 
 <div id="splash">
-  <img src="logo.png">
+  <img src="logo.png" alt="René’s Telraam">
   <h2>René’s Telraam</h2>
 </div>
 
-<img src="logo.png" class="logo">
+<img src="logo.png" class="logo" alt="René’s Telraam">
 
 <button id="installBtn">📲 Installeer app</button>
 
 <div class="card">
-<b>Team Wij</b><br>
-<input id="w1" placeholder="Speler 1">
-<input id="w2" placeholder="Speler 2"><br><br>
-<b>Team Zij</b><br>
-<input id="z1" placeholder="Speler 1">
-<input id="z2" placeholder="Speler 2">
+  <b>Team Wij</b><br>
+  <input id="w1" placeholder="Speler 1" autocomplete="off">
+  <input id="w2" placeholder="Speler 2" autocomplete="off"><br><br>
+  <b>Team Zij</b><br>
+  <input id="z1" placeholder="Speler 1" autocomplete="off">
+  <input id="z2" placeholder="Speler 2" autocomplete="off">
+  <div class="smallNote" style="margin-top:8px;">
+    Punten: typ een getal, of <b>n / p</b> (hoofdletters mag ook).
+  </div>
 </div>
 
 <div class="card">
-<table>
-<thead>
-<tr>
-<th>R</th>
-<th id="tWij">Wij</th>
-<th>Roem</th>
-<th id="tZij">Zij</th>
-<th>Roem</th>
-</tr>
-</thead>
-<tbody id="rows"></tbody>
-<tfoot>
-<tr>
-<th>Punten</th>
-<th id="puntenWij">0</th>
-<th></th>
-<th id="puntenZij">0</th>
-<th></th>
-</tr>
-<tr>
-<th>Roem</th>
-<th id="roemWij">0</th>
-<th></th>
-<th id="roemZij">0</th>
-<th></th>
-</tr>
-<tr>
-<th>Totaal</th>
-<th id="totalWij">0</th>
-<th></th>
-<th id="totalZij">0</th>
-<th></th>
-</tr>
-</tfoot>
-</table>
+  <table>
+    <thead>
+      <tr>
+        <th>R</th>
+        <th id="tWij">Wij</th>
+        <th>Roem</th>
+        <th id="tZij">Zij</th>
+        <th>Roem</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+    <tfoot>
+      <tr>
+        <th>Punten</th>
+        <th id="puntenWij">0</th>
+        <th></th>
+        <th id="puntenZij">0</th>
+        <th></th>
+      </tr>
+      <tr>
+        <th>Roem</th>
+        <th id="roemWij">0</th>
+        <th></th>
+        <th id="roemZij">0</th>
+        <th></th>
+      </tr>
+      <tr>
+        <th>Totaal</th>
+        <th id="totalWij">0</th>
+        <th></th>
+        <th id="totalZij">0</th>
+        <th></th>
+      </tr>
+    </tfoot>
+  </table>
 </div>
 
-<div id="verschil">Verschil: 0</div>
+<div id="scoreCenter">
+  <div class="line1" id="namesLine">Wij - Zij</div>
+  <div class="line2" id="pointsLine">0 - 0</div>
+</div>
+
 <div id="winner"></div>
 
 <button onclick="nieuwPotje()">Nieuw potje</button>
 
 <div class="card">
-<h3>Historie</h3>
-<div id="history"></div>
+  <h3 style="margin:0 0 8px;">Historie</h3>
+  <div id="history"></div>
 </div>
 
 <canvas id="confetti"></canvas>
 
 <script>
-setTimeout(()=>document.getElementById("splash").style.display="none",1500);
+/* ---------------- Splash ---------------- */
+setTimeout(() => (document.getElementById("splash").style.display = "none"), 1200);
 
+/* ---------------- Install button (PWA prompt) ---------------- */
 let deferredPrompt;
-const installBtn=document.getElementById("installBtn");
-
-window.addEventListener("beforeinstallprompt", e=>{
- e.preventDefault();
- deferredPrompt=e;
- installBtn.style.display="block";
+const installBtn = document.getElementById("installBtn");
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = "block";
 });
-installBtn.onclick=()=>deferredPrompt.prompt();
+installBtn.onclick = () => deferredPrompt && deferredPrompt.prompt();
 
-const TOTAL=162, ROUNDS=16;
-const rows=document.getElementById("rows");
+/* ---------------- App logic ---------------- */
+const TOTAL = 162, ROUNDS = 16;
+const rows = document.getElementById("rows");
 
-for(let i=1;i<=ROUNDS;i++){
- let tr=document.createElement("tr");
- tr.innerHTML=`
- <td>${i}</td>
- <td><input data-t="w" data-r="${i}"></td>
- <td><input data-t="rw" data-r="${i}"></td>
- <td><input data-t="z" data-r="${i}" readonly></td>
- <td><input data-t="rz" data-r="${i}"></td>`;
- rows.appendChild(tr);
+for (let i = 1; i <= ROUNDS; i++) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${i}</td>
+    <td><input class="inp-wij" data-t="w" data-r="${i}" inputmode="text" autocapitalize="off" spellcheck="false"></td>
+    <td><input class="inp-wijroem" data-t="rw" data-r="${i}" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
+    <td><input class="inp-zij" data-t="z" data-r="${i}" inputmode="text" autocapitalize="off" spellcheck="false"></td>
+    <td><input class="inp-zijroem" data-t="rz" data-r="${i}" inputmode="numeric" autocapitalize="off" spellcheck="false"></td>
+  `;
+  rows.appendChild(tr);
 }
 
-const inputs=document.querySelectorAll("input[data-t]");
-inputs.forEach(i=>i.oninput=update);
-[w1,w2,z1,z2].forEach(i=>i.oninput=()=>{updateNames();save();});
+/* Enter = toetsenbord weg (blur) */
+document.querySelectorAll("input").forEach(inp => {
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      inp.blur();
+      window.scrollTo({ top: window.scrollY, behavior: "smooth" });
+    }
+  });
+});
 
-function teamWijNaam(){return (w1.value||"Wij")+" & "+(w2.value||"");}
-function teamZijNaam(){return (z1.value||"Zij")+" & "+(z2.value||"");}
-function updateNames(){tWij.textContent=teamWijNaam();tZij.textContent=teamZijNaam();}
-function q(t,r){return document.querySelector(`[data-t="${t}"][data-r="${r}"]`);}
+const inputsScore = document.querySelectorAll('input[data-t]');
+inputsScore.forEach(inp => inp.addEventListener("input", onScoreInput));
 
-function update(){
- let tw=0,tz=0,rw=0,rz=0;
- let ingevuld=true;
+[w1,w2,z1,z2].forEach(i => i.addEventListener("input", () => {
+  updateNames();
+  save();
+}));
 
- for(let i=1;i<=ROUNDS;i++){
-  let w=q("w",i), z=q("z",i);
-  let val=w.value.trim();
-  if(!val) ingevuld=false;
-
-  if(["n","N","p","P"].includes(val)){z.value=TOTAL;w.value=0;}
-  else if(!isNaN(val)&&val!==""){z.value=TOTAL-parseInt(val);}
-
-  tw+=+w.value||0;
-  tz+=+z.value||0;
-  rw+=+q("rw",i).value||0;
-  rz+=+q("rz",i).value||0;
- }
-
- let totaalWij=tw+rw;
- let totaalZij=tz+rz;
-
- puntenWij.textContent=tw;
- puntenZij.textContent=tz;
- roemWij.textContent=rw;
- roemZij.textContent=rz;
- totalWij.textContent=totaalWij;
- totalZij.textContent=totaalZij;
-
- let diff=totaalWij-totaalZij;
- verschil.textContent="Verschil: "+(diff>0?"+":"")+diff;
-
- if(ingevuld) showWinner(totaalWij,totaalZij);
- save();
+function teamWijNaam(){
+  const a = (w1.value || "Wij").trim();
+  const b = (w2.value || "").trim();
+  return b ? `${a} & ${b}` : a;
+}
+function teamZijNaam(){
+  const a = (z1.value || "Zij").trim();
+  const b = (z2.value || "").trim();
+  return b ? `${a} & ${b}` : a;
+}
+function updateNames(){
+  tWij.textContent = teamWijNaam();
+  tZij.textContent = teamZijNaam();
+  document.getElementById("namesLine").textContent = `${teamWijNaam()} - ${teamZijNaam()}`;
 }
 
-function showWinner(w,z){
- let name=w>z?teamWijNaam():teamZijNaam();
- winner.textContent="🏆 Winnaar: "+name+" 🏆";
- confetti();
+function q(t,r){
+  return document.querySelector(`[data-t="${t}"][data-r="${r}"]`);
+}
+
+let suppress = false;            // voorkomt “loop” bij automatisch bijwerken
+let lastWinnerKey = null;        // voorkomt confetti spam
+
+function normalizeSpecial(v){
+  const s = (v || "").trim();
+  if (!s) return "";
+  if (["n","N","p","P"].includes(s)) return s.toLowerCase(); // n of p
+  return s;
+}
+
+function onScoreInput(e){
+  if (suppress) return;
+
+  const el = e.target;
+  const t = el.dataset.t;
+  const r = parseInt(el.dataset.r, 10);
+
+  // Alleen puntenvelden triggeren het automatisch aanvullen
+  if (t !== "w" && t !== "z") {
+    updateTotalsAndUI();
+    save();
+    return;
+  }
+
+  const val = normalizeSpecial(el.value);
+
+  const otherT = (t === "w") ? "z" : "w";
+  const otherEl = q(otherT, r);
+
+  suppress = true;
+
+  if (val === "") {
+    // leeg => tegenover ook leeg (alleen als die door ons ingevuld was)
+    // we zetten hem gewoon leeg zodat het consistent blijft
+    otherEl.value = "";
+  } else if (val === "n" || val === "p") {
+    // nat/pit: andere krijgt 162, deze 0
+    el.value = "0";
+    otherEl.value = String(TOTAL);
+  } else if (!isNaN(val)) {
+    const num = Math.max(0, Math.min(TOTAL, parseInt(val, 10)));
+    el.value = String(num);
+    otherEl.value = String(TOTAL - num);
+  } else {
+    // ongeldige input => laat staan, maar probeer tegenover leeg te maken
+    otherEl.value = "";
+  }
+
+  suppress = false;
+
+  updateTotalsAndUI();
+  save();
+}
+
+function updateTotalsAndUI(){
+  let tw=0, tz=0, rw=0, rz=0;
+  let ingevuld = true;
+
+  for (let i=1; i<=ROUNDS; i++){
+    const w = q("w",i).value.trim();
+    const z = q("z",i).value.trim();
+
+    // “ingevuld” betekent: in elke ronde is er een geldige (numerieke) stand aan beide kanten
+    // Door onze auto-aanvulling is dat normaal gelijk; maar als iemand iets raars typt, wordt het “niet ingevuld”
+    if (w === "" || z === "" || isNaN(w) || isNaN(z)) ingevuld = false;
+
+    tw += parseInt(w,10) || 0;
+    tz += parseInt(z,10) || 0;
+
+    rw += parseInt(q("rw",i).value,10) || 0;
+    rz += parseInt(q("rz",i).value,10) || 0;
+  }
+
+  const totaalWij = tw + rw;
+  const totaalZij = tz + rz;
+
+  puntenWij.textContent = tw;
+  puntenZij.textContent = tz;
+  roemWij.textContent = rw;
+  roemZij.textContent = rz;
+  totalWij.textContent = totaalWij;
+  totalZij.textContent = totaalZij;
+
+  document.getElementById("pointsLine").textContent = `${tw} - ${tz}`;
+
+  // winnaar pas bij alle 16 rondes “netjes” ingevuld
+  if (ingevuld) showWinnerOnce(totaalWij, totaalZij);
+  else {
+    winner.textContent = "";
+    lastWinnerKey = null; // als ze nog bezig zijn, later opnieuw kunnen tonen
+  }
+}
+
+function showWinnerOnce(w, z){
+  const name = (w > z) ? teamWijNaam() : teamZijNaam();
+  const key = `${w}|${z}|${name}`;
+
+  winner.textContent = `🏆 Winnaar: ${name} 🏆`;
+
+  if (lastWinnerKey !== key) {
+    lastWinnerKey = key;
+    confetti();
+  }
 }
 
 function save(){
- let d={w1:w1.value,w2:w2.value,z1:z1.value,z2:z2.value};
- inputs.forEach(i=>d[i.dataset.t+i.dataset.r]=i.value);
- localStorage.setItem("game",JSON.stringify(d));
+  const d = { w1:w1.value, w2:w2.value, z1:z1.value, z2:z2.value, lastWinnerKey };
+  inputsScore.forEach(i => d[i.dataset.t + i.dataset.r] = i.value);
+  localStorage.setItem("game", JSON.stringify(d));
 }
 
 function load(){
- let d=JSON.parse(localStorage.getItem("game")||"{}");
- w1.value=d.w1||""; w2.value=d.w2||"";
- z1.value=d.z1||""; z2.value=d.z2||"";
- inputs.forEach(i=>{let k=i.dataset.t+i.dataset.r;if(d[k])i.value=d[k];});
- updateNames(); update(); loadHistory();
+  const d = JSON.parse(localStorage.getItem("game") || "{}");
+  w1.value = d.w1 || "";
+  w2.value = d.w2 || "";
+  z1.value = d.z1 || "";
+  z2.value = d.z2 || "";
+  lastWinnerKey = d.lastWinnerKey || null;
+
+  inputsScore.forEach(i => {
+    const k = i.dataset.t + i.dataset.r;
+    if (d[k] !== undefined) i.value = d[k];
+  });
+
+  updateNames();
+  updateTotalsAndUI();
+  loadHistory();
 }
 
 function nieuwPotje(){
- if(winner.textContent){
-  let hist=JSON.parse(localStorage.getItem("history")||"[]");
-  hist.unshift(winner.textContent);
-  localStorage.setItem("history",JSON.stringify(hist));
- }
- localStorage.removeItem("game");
- location.reload();
+  if (winner.textContent) {
+    const hist = JSON.parse(localStorage.getItem("history") || "[]");
+    hist.unshift(winner.textContent);
+    localStorage.setItem("history", JSON.stringify(hist));
+  }
+  localStorage.removeItem("game");
+  location.reload();
 }
 
 function loadHistory(){
- let hist=JSON.parse(localStorage.getItem("history")||"[]");
- history.innerHTML="";
- hist.forEach(h=>{
-  let d=document.createElement("div");
-  d.textContent=h;
-  history.appendChild(d);
- });
+  const hist = JSON.parse(localStorage.getItem("history") || "[]");
+  history.innerHTML = "";
+  hist.forEach(h => {
+    const div = document.createElement("div");
+    div.textContent = h;
+    history.appendChild(div);
+  });
 }
 
 function confetti(){
- let c=document.getElementById("confetti"),ctx=c.getContext("2d");
- c.width=innerWidth;c.height=innerHeight;
- let p=Array.from({length:200},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*6}));
- let t=setInterval(()=>{
-  ctx.clearRect(0,0,c.width,c.height);
-  p.forEach(o=>{
-   ctx.beginPath();
-   ctx.arc(o.x,o.y,o.r,0,7);
-   ctx.fillStyle="hsl("+Math.random()*360+",100%,50%)";
-   ctx.fill();
-   o.y+=3;if(o.y>c.height)o.y=0;
-  });
- },30);
- setTimeout(()=>clearInterval(t),4000);
+  const c = document.getElementById("confetti");
+  const ctx = c.getContext("2d");
+  c.width = innerWidth;
+  c.height = innerHeight;
+
+  const p = Array.from({length: 220}, () => ({
+    x: Math.random() * c.width,
+    y: Math.random() * c.height,
+    r: Math.random() * 6 + 2,
+    vy: Math.random() * 2 + 2
+  }));
+
+  const t = setInterval(() => {
+    ctx.clearRect(0,0,c.width,c.height);
+    p.forEach(o => {
+      ctx.beginPath();
+      ctx.arc(o.x,o.y,o.r,0,Math.PI*2);
+      ctx.fillStyle = `hsl(${Math.random()*360},100%,50%)`;
+      ctx.fill();
+      o.y += o.vy;
+      if (o.y > c.height) o.y = 0;
+    });
+  }, 30);
+
+  setTimeout(() => clearInterval(t), 3500);
 }
 
 load();
 </script>
 </body>
 </html>
-

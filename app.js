@@ -14,19 +14,29 @@
   const pad2 = (n) => String(n).padStart(2, "0");
   const fmtDateTime = (iso) => {
     const d = new Date(iso);
-    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(
+      d.getHours()
+    )}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
   };
 
   const escapeHTML = (s) =>
     String(s ?? "").replace(/[&<>"']/g, (c) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
     })[c]);
 
   const isStandaloneMode = () =>
     (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
     window.navigator.standalone === true;
 
-  const hapticError = () => { try { navigator.vibrate?.(80); } catch {} };
+  const hapticError = () => {
+    try {
+      navigator.vibrate?.(80);
+    } catch {}
+  };
 
   const normalizeSpecial = (v) => {
     v = String(v ?? "").trim();
@@ -48,16 +58,24 @@
   };
 
   const loadJSON = (k, fallback) => {
-    try { return JSON.parse(localStorage.getItem(k) || "") ?? fallback; }
-    catch { return fallback; }
+    try {
+      const raw = localStorage.getItem(k);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch {
+      return fallback;
+    }
   };
   const saveJSON = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
   /* ---------- DOM refs ---------- */
   const installBtn = $("installBtn");
 
-  const w1 = $("w1"), w2 = $("w2"), z1 = $("z1"), z2 = $("z2");
-  const tWij = $("tWij"), tZij = $("tZij");
+  const w1 = $("w1"),
+    w2 = $("w2"),
+    z1 = $("z1"),
+    z2 = $("z2");
+  const tWij = $("tWij"),
+    tZij = $("tZij");
   const rows = $("rows");
 
   const namesLineSticky = $("namesLineSticky");
@@ -142,31 +160,38 @@
   const q = (t, r) => document.querySelector(`[data-t="${t}"][data-r="${r}"]`);
 
   const clearRoundError = (r) => {
-    q("w", r).classList.remove("inputError");
-    q("z", r).classList.remove("inputError");
+    const a = q("w", r);
+    const b = q("z", r);
+    if (a) a.classList.remove("inputError");
+    if (b) b.classList.remove("inputError");
   };
   const setRoundError = (r) => {
-    q("w", r).classList.add("inputError");
-    q("z", r).classList.add("inputError");
+    const a = q("w", r);
+    const b = q("z", r);
+    if (a) a.classList.add("inputError");
+    if (b) b.classList.add("inputError");
   };
 
   /* ---------- Roem rules ---------- */
-  function parseRoem(raw){
+  function parseRoem(raw) {
     const s = String(raw ?? "").trim();
-    if (!s) return { ok:true, value:0 };
-    if (!isNumericLike(s)) return { ok:false, value:0 };
+    if (!s) return { ok: true, value: 0 };
+    if (!isNumericLike(s)) return { ok: false, value: 0 };
     const n = parseInt(s, 10);
-    if (n < 0) return { ok:false, value:0 };
-    if (n % 10 !== 0) return { ok:false, value:0 };
-    return { ok:true, value:n };
+    if (n < 0) return { ok: false, value: 0 };
+    if (n % 10 !== 0) return { ok: false, value: 0 };
+    return { ok: true, value: n };
   }
 
   // notify ONLY on blur/enter
-  function validateRoemField(inp, { notify } = { notify:false }){
+  function validateRoemField(inp, { notify } = { notify: false }) {
     const { ok } = parseRoem(inp.value);
-    if (!ok){
+    if (!ok) {
       inp.classList.add("inputError");
-      if (notify) { hapticError(); showToast("Dit aantal roem kan helemaal niet! 😡"); }
+      if (notify) {
+        hapticError();
+        showToast("Dit aantal roem kan helemaal niet! 😡");
+      }
       return false;
     }
     inp.classList.remove("inputError");
@@ -181,33 +206,43 @@
   /* ---------- Pit bonus (+100 roem) ---------- */
   const setPitBonus = (team, round, apply) => {
     const ptsEl = q(team, round);
-    const roemEl = (team === "w") ? q("rw", round) : q("rz", round);
-    const had = (ptsEl.dataset.pbonus === "1");
+    const roemEl = team === "w" ? q("rw", round) : q("rz", round);
+    if (!ptsEl || !roemEl) return;
+
+    const had = ptsEl.dataset.pbonus === "1";
 
     if (apply && !had) {
       const cur = parseInt(roemEl.value, 10) || 0;
       roemEl.value = String(cur + 100);
       ptsEl.dataset.pbonus = "1";
-      // stil valideren; toast pas bij blur
-      validateRoemField(roemEl, { notify:false });
+      validateRoemField(roemEl, { notify: false });
     }
     if (!apply && had) {
       const cur = parseInt(roemEl.value, 10) || 0;
       roemEl.value = String(Math.max(0, cur - 100));
       ptsEl.dataset.pbonus = "0";
-      validateRoemField(roemEl, { notify:false });
+      validateRoemField(roemEl, { notify: false });
     }
   };
 
   /* ---------- 81-81 rule ---------- */
   const validateNoEqualRound = (r) => {
-    const wPts = pointsValueFromDisplay(q("w", r).value);
-    const zPts = pointsValueFromDisplay(q("z", r).value);
-    if (wPts === null || zPts === null) { clearRoundError(r); return true; }
+    const wEl = q("w", r);
+    const zEl = q("z", r);
+    const rwEl = q("rw", r);
+    const rzEl = q("rz", r);
+    if (!wEl || !zEl || !rwEl || !rzEl) return true;
+
+    const wPts = pointsValueFromDisplay(wEl.value);
+    const zPts = pointsValueFromDisplay(zEl.value);
+    if (wPts === null || zPts === null) {
+      clearRoundError(r);
+      return true;
+    }
 
     if (wPts === 81 && zPts === 81) {
-      const rwVal = readRoemOk(q("rw", r));
-      const rzVal = readRoemOk(q("rz", r));
+      const rwVal = readRoemOk(rwEl);
+      const rzVal = readRoemOk(rzEl);
       if (rwVal === rzVal) {
         setRoundError(r);
         showToast("Wakker worden! Je kunt niet evenveel punten krijgen in een ronde. 😊");
@@ -218,8 +253,7 @@
     return true;
   };
 
-  /* ---------- Build table if not present ---------- */
-  // (Als jouw HTML al rows heeft: dit overschrijft ze. Past bij jouw huidige setup.)
+  /* ---------- Build table ---------- */
   rows.innerHTML = "";
   for (let r = 1; r <= ROUNDS; r++) {
     const tr = document.createElement("tr");
@@ -257,17 +291,58 @@
   installBtn?.addEventListener("click", () => deferredPrompt?.prompt());
   if (isStandaloneMode() && installBtn) installBtn.style.display = "none";
 
+  /* ---------- Herlaad-knop (helemaal onderaan) ---------- */
+  let reloadBar = null;
+  const ensureReloadBar = () => {
+    if (reloadBar) return reloadBar;
+
+    const bar = document.createElement("div");
+    bar.className = "bottomBar";
+    bar.style.display = "none";
+    bar.style.zIndex = "9996";
+    bar.id = "reloadBar";
+
+    const row = document.createElement("div");
+    row.className = "row";
+
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = "Nieuwe versie klaar ✅";
+
+    const btn = document.createElement("button");
+    btn.textContent = "🔄 Herlaad";
+    btn.addEventListener("click", () => location.reload());
+
+    row.appendChild(hint);
+    row.appendChild(btn);
+    bar.appendChild(row);
+
+    document.body.appendChild(bar);
+    reloadBar = bar;
+    return bar;
+  };
+
+  const showReloadBar = () => {
+    const bar = ensureReloadBar();
+    bar.style.display = "block";
+    adjustBars(); // zodat hij netjes boven keyboard/safe-area blijft
+  };
+
   /* ---------- Service Worker ---------- */
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", async () => {
       try {
-        const reg = await navigator.serviceWorker.register(`./service-worker.js?v=${APP_VERSION}`);
+        const reg = await navigator.serviceWorker.register(
+          `./service-worker.js?v=${APP_VERSION}`
+        );
         reg.addEventListener("updatefound", () => {
           const nw = reg.installing;
           if (!nw) return;
           nw.addEventListener("statechange", () => {
             if (nw.state === "installed" && navigator.serviceWorker.controller) {
-              showToast("Nieuwe versie klaar ✅ Herlaad om te updaten.");
+              // Tip 9: herlaadknop onderaan
+              showToast("Nieuwe versie klaar ✅");
+              showReloadBar();
             }
           });
         });
@@ -290,9 +365,15 @@
     if (npBar.style.display === "block") npBar.style.bottom = `${10 + kh}px`;
     else npBar.style.bottom = "10px";
 
-    const npOffset = (npBar.style.display === "block") ? 74 : 0;
-    if (roemBar.style.display === "block") roemBar.style.bottom = `${10 + kh + npOffset}px`;
+    const npOffset = npBar.style.display === "block" ? 74 : 0;
+    if (roemBar.style.display === "block")
+      roemBar.style.bottom = `${10 + kh + npOffset}px`;
     else roemBar.style.bottom = "10px";
+
+    // reloadbar altijd helemaal onderaan, maar wel boven keyboard
+    if (reloadBar && reloadBar.style.display === "block") {
+      reloadBar.style.bottom = `${10 + kh}px`;
+    }
   };
 
   if (window.visualViewport) {
@@ -305,7 +386,9 @@
   const showNPBarFor = (inp) => {
     focusedPointsInput = inp;
     npBar.style.display = "block";
-    npHint.textContent = `Ronde ${inp.dataset.r} • ${inp.dataset.t === "w" ? "Wij" : "Zij"} punten`;
+    npHint.textContent = `Ronde ${inp.dataset.r} • ${
+      inp.dataset.t === "w" ? "Wij" : "Zij"
+    } punten`;
     adjustBars();
   };
 
@@ -337,7 +420,9 @@
   const showRoemBarFor = (inp) => {
     focusedRoemInput = inp;
     roemBar.style.display = "block";
-    roemHint.textContent = `Ronde ${inp.dataset.r} • ${inp.dataset.t === "rw" ? "Wij roem" : "Zij roem"}`;
+    roemHint.textContent = `Ronde ${inp.dataset.r} • ${
+      inp.dataset.t === "rw" ? "Wij roem" : "Zij roem"
+    }`;
     adjustBars();
   };
 
@@ -358,8 +443,8 @@
     if (!focusedRoemInput) return;
     const cur = readRoemOk(focusedRoemInput);
     focusedRoemInput.value = String(cur + delta);
-    validateRoemField(focusedRoemInput, { notify:false });
-    focusedRoemInput.dispatchEvent(new Event("input", { bubbles:true }));
+    validateRoemField(focusedRoemInput, { notify: false });
+    focusedRoemInput.dispatchEvent(new Event("input", { bubbles: true }));
     focusedRoemInput.focus();
   };
 
@@ -368,23 +453,23 @@
   roemClear.addEventListener("click", () => {
     if (!focusedRoemInput) return;
     focusedRoemInput.value = "";
-    focusedRoemInput.dispatchEvent(new Event("input", { bubbles:true }));
+    focusedRoemInput.dispatchEvent(new Event("input", { bubbles: true }));
     focusedRoemInput.focus();
   });
 
   /* ---------- Visible roem transfer on Nat (N) ---------- */
   function applyNatRoemTransferVisual(team, round, prevNorm, nowNorm) {
-    // team is "w" or "z" (points input team)
     const ptsEl = q(team, round);
-    const roemThis = (team === "w") ? q("rw", round) : q("rz", round);
-    const roemOther = (team === "w") ? q("rz", round) : q("rw", round);
+    const roemThis = team === "w" ? q("rw", round) : q("rz", round);
+    const roemOther = team === "w" ? q("rz", round) : q("rw", round);
+    if (!ptsEl || !roemThis || !roemOther) return;
 
-    const prevWasN = (prevNorm === "N");
-    const nowIsN = (nowNorm === "N");
+    const prevWasN = prevNorm === "N";
+    const nowIsN = nowNorm === "N";
 
-    // From not-N to N: move roemThis -> roemOther (if valid roem counts)
+    // From not-N to N: move roemThis -> roemOther (ONLY if roemThis is valid)  [Tip 6]
     if (!prevWasN && nowIsN) {
-      // If there was an older transfer stored, clear first (safety)
+      // clear older transfer first (safety)
       const old = parseInt(ptsEl.dataset.nTransfer || "0", 10) || 0;
       if (old > 0) {
         const oth = readRoemOk(roemOther);
@@ -392,19 +477,25 @@
         ptsEl.dataset.nTransfer = "0";
       }
 
-      const amount = readRoemOk(roemThis);
+      const pr = parseRoem(roemThis.value);
+      if (!pr.ok) {
+        // roem is ongeldig: niet verplaatsen
+        ptsEl.dataset.nTransfer = "0";
+        return;
+      }
+
+      const amount = pr.value;
       if (amount > 0) {
         const otherVal = readRoemOk(roemOther);
         roemOther.value = String(otherVal + amount);
 
-        // keep it simple: clear nat-team roem field visibly
+        // clear nat-team roem field visibly
         roemThis.value = "";
 
         ptsEl.dataset.nTransfer = String(amount);
 
-        // update totals quietly
-        roemOther.dispatchEvent(new Event("input", { bubbles:true }));
-        roemThis.dispatchEvent(new Event("input", { bubbles:true }));
+        roemOther.dispatchEvent(new Event("input", { bubbles: true }));
+        roemThis.dispatchEvent(new Event("input", { bubbles: true }));
       } else {
         ptsEl.dataset.nTransfer = "0";
       }
@@ -417,78 +508,92 @@
         const otherVal = readRoemOk(roemOther);
         roemOther.value = String(Math.max(0, otherVal - amount));
 
-        // restore into roemThis: if user typed something there, add to it; else set amount
         const thisVal = readRoemOk(roemThis);
         if ((roemThis.value || "").trim() === "") roemThis.value = String(amount);
         else roemThis.value = String(thisVal + amount);
 
         ptsEl.dataset.nTransfer = "0";
 
-        roemOther.dispatchEvent(new Event("input", { bubbles:true }));
-        roemThis.dispatchEvent(new Event("input", { bubbles:true }));
+        roemOther.dispatchEvent(new Event("input", { bubbles: true }));
+        roemThis.dispatchEvent(new Event("input", { bubbles: true }));
       }
     }
   }
 
-  /* ---------- recompute totals (roem is now already “physically” moved) ---------- */
+  /* ---------- recompute totals ---------- */
   const recompute = () => {
-    let pw = 0, pz = 0;
-    let rwSum = 0, rzSum = 0;
+    let pw = 0,
+      pz = 0;
+    let rwSum = 0,
+      rzSum = 0;
 
     let filled = true;
     let anyInvalid = false;
 
-    let natW = 0, natZ = 0, pitW = 0, pitZ = 0;
+    let natW = 0,
+      natZ = 0,
+      pitW = 0,
+      pitZ = 0;
 
     for (let r = 1; r <= ROUNDS; r++) {
-      const wRaw = (q("w", r).value || "").trim();
-      const zRaw = (q("z", r).value || "").trim();
+      const wEl = q("w", r);
+      const zEl = q("z", r);
+      const rwInp = q("rw", r);
+      const rzInp = q("rz", r);
+      if (!wEl || !zEl || !rwInp || !rzInp) continue;
+
+      const wRaw = (wEl.value || "").trim();
+      const zRaw = (zEl.value || "").trim();
       const wNorm = normalizeSpecial(wRaw);
       const zNorm = normalizeSpecial(zRaw);
 
-      const wIsN = (wNorm === "N");
-      const zIsN = (zNorm === "N");
-      const wIsP = (wNorm === "P");
-      const zIsP = (zNorm === "P");
+      const wIsN = wNorm === "N";
+      const zIsN = zNorm === "N";
+      const wIsP = wNorm === "P";
+      const zIsP = zNorm === "P";
 
       if (wIsN) natW++;
       if (zIsN) natZ++;
       if (wIsP) pitW++;
       if (zIsP) pitZ++;
 
-      // N + N tegelijk is fout (onlogisch)
+      // N + N tegelijk is fout
       if (wIsN && zIsN) {
         anyInvalid = true;
-        q("w", r).classList.add("inputError");
-        q("z", r).classList.add("inputError");
+        wEl.classList.add("inputError");
+        zEl.classList.add("inputError");
       } else {
-        q("w", r).classList.remove("inputError");
-        q("z", r).classList.remove("inputError");
+        wEl.classList.remove("inputError");
+        zEl.classList.remove("inputError");
       }
 
       const wPts = pointsValueFromDisplay(wRaw);
       const zPts = pointsValueFromDisplay(zRaw);
       if (wPts === null || zPts === null) filled = false;
 
-      pw += (wPts ?? 0);
-      pz += (zPts ?? 0);
+      pw += wPts ?? 0;
+      pz += zPts ?? 0;
 
-      // roem validation (silent in recompute)
-      const rwInp = q("rw", r);
-      const rzInp = q("rz", r);
-
+      // roem validation (silent)
       const rwParsed = parseRoem(rwInp.value);
       const rzParsed = parseRoem(rzInp.value);
 
-      if (!rwParsed.ok) { rwInp.classList.add("inputError"); anyInvalid = true; }
-      else { rwInp.classList.remove("inputError"); }
+      if (!rwParsed.ok) {
+        rwInp.classList.add("inputError");
+        anyInvalid = true;
+      } else {
+        rwInp.classList.remove("inputError");
+      }
 
-      if (!rzParsed.ok) { rzInp.classList.add("inputError"); anyInvalid = true; }
-      else { rzInp.classList.remove("inputError"); }
+      if (!rzParsed.ok) {
+        rzInp.classList.add("inputError");
+        anyInvalid = true;
+      } else {
+        rzInp.classList.remove("inputError");
+      }
 
-      // only count valid roem
-      rwSum += (rwParsed.ok ? rwParsed.value : 0);
-      rzSum += (rzParsed.ok ? rzParsed.value : 0);
+      rwSum += rwParsed.ok ? rwParsed.value : 0;
+      rzSum += rzParsed.ok ? rzParsed.value : 0;
 
       if (!validateNoEqualRound(r)) anyInvalid = true;
     }
@@ -526,30 +631,44 @@
     confettiCanvas.width = innerWidth;
     confettiCanvas.height = innerHeight;
 
+    const w = confettiCanvas.width;
+    const h = confettiCanvas.height;
+
+    // Tip 4: vaste kleur per confetti-deeltje (geen flikkeren)
     const parts = Array.from({ length: 220 }, () => ({
-      x: Math.random() * confettiCanvas.width,
-      y: Math.random() * confettiCanvas.height,
+      x: Math.random() * w,
+      y: Math.random() * h,
       r: Math.random() * 6 + 2,
-      vy: Math.random() * 2 + 2
+      vy: Math.random() * 2 + 2,
+      hue: Math.random() * 360,
     }));
 
     const timer = setInterval(() => {
-      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      confettiCtx.clearRect(0, 0, w, h);
       for (const o of parts) {
         confettiCtx.beginPath();
         confettiCtx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
-        confettiCtx.fillStyle = `hsl(${Math.random() * 360},100%,50%)`;
+        confettiCtx.fillStyle = `hsl(${o.hue},100%,50%)`;
         confettiCtx.fill();
         o.y += o.vy;
-        if (o.y > confettiCanvas.height) o.y = 0;
+        if (o.y > h) o.y = 0;
       }
     }, 30);
 
     setTimeout(() => clearInterval(timer), 2600);
   };
 
+  // Tip 3: gelijkspel melding + geen "Zij wint" bij gelijk
   const showWinnerOnce = (tw, tz) => {
-    const name = (tw > tz) ? teamWijNaam() : teamZijNaam();
+    if (tw === tz) {
+      const key = `TIE|${tw}|${tz}`;
+      winnerEl.textContent = "Dat is wel heel bijzonder! Een gelijkspel! 🤯";
+      // geen confetti bij gelijkspel
+      lastWinnerKey = key;
+      return;
+    }
+
+    const name = tw > tz ? teamWijNaam() : teamZijNaam();
     const key = `${tw}|${tz}|${name}`;
     winnerEl.textContent = `🏆 Winnaar: ${name} 🏆`;
     if (lastWinnerKey !== key) {
@@ -561,8 +680,13 @@
   /* ---------- persistence ---------- */
   const saveGame = () => {
     const d = {
-      w1: w1.value, w2: w2.value, z1: z1.value, z2: z2.value,
-      gameStartedAt, gameEndedAt, lastWinnerKey
+      w1: w1.value,
+      w2: w2.value,
+      z1: z1.value,
+      z2: z2.value,
+      gameStartedAt,
+      gameEndedAt,
+      lastWinnerKey,
     };
 
     const inputs = document.querySelectorAll("input[data-t]");
@@ -570,7 +694,6 @@
       const k = inp.dataset.t + inp.dataset.r;
       d[k] = inp.value;
 
-      // keep prevNorm/pbonus and nat-transfer amount for points inputs
       if (inp.dataset.t === "w" || inp.dataset.t === "z") {
         d[k + "_pbonus"] = inp.dataset.pbonus || "0";
         d[k + "_prev"] = inp.dataset.prevNorm || normalizeSpecial(inp.value);
@@ -627,29 +750,43 @@
         w: q("w", r).value,
         rw: q("rw", r).value,
         z: q("z", r).value,
-        rz: q("rz", r).value
+        rz: q("rz", r).value,
       });
     }
 
     const wijTeam = teamWijNaam();
     const zijTeam = teamZijNaam();
-    const winnerTeam = ((pw + rw) > (pz + rz)) ? wijTeam : zijTeam;
 
-    const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() :
-      `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const totalWij = pw + rw;
+    const totalZij = pz + rz;
+
+    let winnerText = "";
+    if (totalWij === totalZij) winnerText = "Dat is wel heel bijzonder! Een gelijkspel! 🤯";
+    else winnerText = `🏆 Winnaar: ${totalWij > totalZij ? wijTeam : zijTeam} 🏆`;
+
+    const id =
+      window.crypto && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
     return {
       id,
       startedAt: gameStartedAt,
       endedAt: gameEndedAt,
-      wijTeam, zijTeam,
-      pointsWij: pw, pointsZij: pz,
-      roemWij: rw, roemZij: rz,
-      totalWij: pw + rw, totalZij: pz + rz,
-      natWij: natW, natZij: natZ,
-      pitWij: pitW, pitZij: pitZ,
-      winnerText: `🏆 Winnaar: ${winnerTeam} 🏆`,
-      rounds
+      wijTeam,
+      zijTeam,
+      pointsWij: pw,
+      pointsZij: pz,
+      roemWij: rw,
+      roemZij: rz,
+      totalWij,
+      totalZij,
+      natWij: natW,
+      natZij: natZ,
+      pitWij: pitW,
+      pitZij: pitZ,
+      winnerText,
+      rounds,
     };
   };
 
@@ -659,12 +796,17 @@
     const card = (title, html) => {
       const d = document.createElement("div");
       d.className = "badge";
-      d.innerHTML = `<div style="font-weight:900; margin-bottom:6px;">${escapeHTML(title)}</div><div>${html}</div>`;
+      d.innerHTML = `<div style="font-weight:900; margin-bottom:6px;">${escapeHTML(
+        title
+      )}</div><div>${html}</div>`;
       highscoresEl.appendChild(d);
     };
 
     if (!hist.length) {
-      card("Nog geen highscores", "Speel een potje en druk daarna op <b>Nieuw potje</b> om het op te slaan.");
+      card(
+        "Nog geen highscores",
+        "Speel een potje en druk daarna op <b>Nieuw potje</b> om het op te slaan."
+      );
       return;
     }
 
@@ -672,7 +814,14 @@
     const addTeam = (team, points, roem, nat, pit) => {
       const key = team || "Onbekend";
       if (!teamStats.has(key)) {
-        teamStats.set(key, { team:key, bestPoints:-Infinity, worstPoints:Infinity, bestRoem:-Infinity, natTotal:0, pitTotal:0 });
+        teamStats.set(key, {
+          team: key,
+          bestPoints: -Infinity,
+          worstPoints: Infinity,
+          bestRoem: -Infinity,
+          natTotal: 0,
+          pitTotal: 0,
+        });
       }
       const s = teamStats.get(key);
       s.bestPoints = Math.max(s.bestPoints, points);
@@ -690,11 +839,11 @@
     const arr = Array.from(teamStats.values());
     const top = (cmp) => arr.slice().sort(cmp)[0];
 
-    const bestPoints = top((a,b)=>b.bestPoints - a.bestPoints);
-    const worstPoints = top((a,b)=>a.worstPoints - b.worstPoints);
-    const bestRoem = top((a,b)=>b.bestRoem - a.bestRoem);
-    const mostNat = top((a,b)=>b.natTotal - a.natTotal);
-    const mostPit = top((a,b)=>b.pitTotal - a.pitTotal);
+    const bestPoints = top((a, b) => b.bestPoints - a.bestPoints);
+    const worstPoints = top((a, b) => a.worstPoints - b.worstPoints);
+    const bestRoem = top((a, b) => b.bestRoem - a.bestRoem);
+    const mostNat = top((a, b) => b.natTotal - a.natTotal);
+    const mostPit = top((a, b) => b.pitTotal - a.pitTotal);
 
     card("Hoogste punten (zonder roem)", `<b>${escapeHTML(bestPoints.team)}</b><br>${bestPoints.bestPoints} punten`);
     card("Laagste punten (zonder roem)", `<b>${escapeHTML(worstPoints.team)}</b><br>${worstPoints.worstPoints} punten`);
@@ -706,7 +855,9 @@
   const pdfHTMLForEntry = (entry) => {
     let rowsHtml = "";
     for (const r of entry.rounds) {
-      rowsHtml += `<tr><td>${r.r}</td><td>${escapeHTML(r.w)}</td><td>${escapeHTML(r.rw||"")}</td><td>${escapeHTML(r.z)}</td><td>${escapeHTML(r.rz||"")}</td></tr>`;
+      rowsHtml += `<tr><td>${r.r}</td><td>${escapeHTML(r.w)}</td><td>${escapeHTML(
+        r.rw || ""
+      )}</td><td>${escapeHTML(r.z)}</td><td>${escapeHTML(r.rz || "")}</td></tr>`;
     }
 
     return `<!doctype html><html lang="nl"><head>
@@ -749,7 +900,10 @@ ${escapeHTML(entry.winnerText)}
     pdfOverlay.style.display = "block";
 
     pdfPrint.onclick = () => {
-      try { pdfFrame.contentWindow.focus(); pdfFrame.contentWindow.print(); } catch {}
+      try {
+        pdfFrame.contentWindow.focus();
+        pdfFrame.contentWindow.print();
+      } catch {}
     };
     pdfBack.onclick = () => {
       pdfOverlay.style.display = "none";
@@ -763,9 +917,13 @@ ${escapeHTML(entry.winnerText)}
 
     const w = window.open("", "_blank");
     if (!w) return openPdfOverlay(html, `${entry.wijTeam} - ${entry.zijTeam}`);
-    w.document.open(); w.document.write(html); w.document.close();
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
     w.focus();
-    try { w.print(); } catch {}
+    try {
+      w.print();
+    } catch {}
   };
 
   const renderHistory = () => {
@@ -806,7 +964,7 @@ ${escapeHTML(entry.winnerText)}
       delBtn.textContent = "🗑️ Verwijder";
       delBtn.className = "secondary";
       delBtn.onclick = () => {
-        const next = loadHistory().filter(x => x.id !== entry.id);
+        const next = loadHistory().filter((x) => x.id !== entry.id);
         saveHistory(next);
         renderHistory();
         renderHighscores(next);
@@ -830,7 +988,7 @@ ${escapeHTML(entry.winnerText)}
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `renes-telraam-historie-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `renes-telraam-historie-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -851,10 +1009,12 @@ ${escapeHTML(entry.winnerText)}
       if (!Array.isArray(incoming)) throw new Error("bad format");
 
       const current = loadHistory();
-      const byId = new Map(current.map(x => [x.id, x]));
+      const byId = new Map(current.map((x) => [x.id, x]));
       for (const entry of incoming) if (entry && entry.id) byId.set(entry.id, entry);
 
-      const merged = Array.from(byId.values()).sort((a,b) => (b.endedAt || "").localeCompare(a.endedAt || ""));
+      const merged = Array.from(byId.values()).sort((a, b) =>
+        (b.endedAt || "").localeCompare(a.endedAt || "")
+      );
       saveHistory(merged);
       renderHistory();
       showToast("Historie geïmporteerd ✅");
@@ -884,22 +1044,71 @@ ${escapeHTML(entry.winnerText)}
     return true;
   };
 
+  // Tip 8: nieuw potje zonder page reload
+  const resetGameInPlace = () => {
+    suppress = true;
+
+    // names leeg (mag ook laten staan; maar meestal nieuw potje = nieuw team)
+    w1.value = "";
+    w2.value = "";
+    z1.value = "";
+    z2.value = "";
+
+    // alle score inputs leeg + datasets resetten
+    document.querySelectorAll("input[data-t]").forEach((inp) => {
+      inp.value = "";
+      inp.classList.remove("inputError");
+
+      if (inp.dataset.t === "w" || inp.dataset.t === "z") {
+        inp.dataset.pbonus = "0";
+        inp.dataset.prevNorm = "";
+        inp.dataset.nTransfer = "0";
+      }
+    });
+
+    // state reset
+    lastWinnerKey = null;
+    gameStartedAt = null;
+    gameEndedAt = null;
+    winnerEl.textContent = "";
+
+    // bars weg
+    focusedPointsInput = null;
+    focusedRoemInput = null;
+    npBar.style.display = "none";
+    roemBar.style.display = "none";
+
+    // storage reset
+    localStorage.removeItem(GAME_KEY);
+
+    suppress = false;
+
+    updateNames();
+    recompute();
+    saveGame(); // start "lege" state opnieuw op
+    adjustBars();
+  };
+
   const newGame = () => {
     if (winnerEl.textContent && gameStartedAt && gameEndedAt && isGameCompleteAndValid()) {
       const entry = buildHistoryEntry();
       const hist = loadHistory();
       hist.unshift(entry);
       saveHistory(hist);
+      renderHistory();
     }
-    localStorage.removeItem(GAME_KEY);
-    location.reload();
+    resetGameInPlace();
+    showToast("Nieuw potje ✅");
   };
 
   /* ---------- input logic ---------- */
   const onScoreInput = (e) => {
     if (suppress) return;
 
-    if (!gameStartedAt) { gameStartedAt = nowISO(); gameEndedAt = null; }
+    if (!gameStartedAt) {
+      gameStartedAt = nowISO();
+      gameEndedAt = null;
+    }
 
     const el = e.target;
     const t = el.dataset.t;
@@ -907,7 +1116,7 @@ ${escapeHTML(entry.winnerText)}
 
     // roem input: silent validate during typing
     if (t === "rw" || t === "rz") {
-      validateRoemField(el, { notify:false });
+      validateRoemField(el, { notify: false });
       validateNoEqualRound(r);
       recompute();
       saveGame();
@@ -920,7 +1129,7 @@ ${escapeHTML(entry.winnerText)}
     const prevNorm = el.dataset.prevNorm || "";
     const valNorm = normalizeSpecial(el.value);
 
-    const otherT = (t === "w") ? "z" : "w";
+    const otherT = t === "w" ? "z" : "w";
     const otherEl = q(otherT, r);
 
     suppress = true;
@@ -943,7 +1152,7 @@ ${escapeHTML(entry.winnerText)}
     if (prevNorm === "P" && valNorm !== "P") setPitBonus(t, r, false);
     if (prevNorm !== "P" && valNorm === "P") setPitBonus(t, r, true);
 
-    // ✅ Visible roem transfer when switching to/from N
+    // Visible roem transfer when switching to/from N (met Tip 6 safeguard)
     applyNatRoemTransferVisual(t, r, prevNorm, valNorm);
 
     el.dataset.prevNorm = valNorm;
@@ -956,28 +1165,32 @@ ${escapeHTML(entry.winnerText)}
   };
 
   /* ---------- Hook events ---------- */
-  document.querySelectorAll('input[data-t]').forEach(inp => inp.addEventListener("input", onScoreInput));
+  document.querySelectorAll("input[data-t]").forEach((inp) =>
+    inp.addEventListener("input", onScoreInput)
+  );
 
   // points focus => npBar
-  document.querySelectorAll('input[data-t="w"], input[data-t="z"]').forEach(inp => {
+  document.querySelectorAll('input[data-t="w"], input[data-t="z"]').forEach((inp) => {
     inp.addEventListener("focus", () => showNPBarFor(inp));
     inp.addEventListener("blur", hideNPBarIfNeeded);
   });
 
   // roem focus => roemBar + notify on blur
-  document.querySelectorAll('input[data-t="rw"], input[data-t="rz"]').forEach(inp => {
+  document.querySelectorAll('input[data-t="rw"], input[data-t="rz"]').forEach((inp) => {
     inp.addEventListener("focus", () => showRoemBarFor(inp));
     inp.addEventListener("blur", () => {
-      validateRoemField(inp, { notify:true });
+      validateRoemField(inp, { notify: true });
       hideRoemBarIfNeeded();
     });
   });
 
   // names
-  [w1,w2,z1,z2].forEach(inp => inp.addEventListener("input", () => {
-    updateNames();
-    saveGame();
-  }));
+  [w1, w2, z1, z2].forEach((inp) =>
+    inp.addEventListener("input", () => {
+      updateNames();
+      saveGame();
+    })
+  );
 
   newGameBtn.addEventListener("click", newGame);
 
